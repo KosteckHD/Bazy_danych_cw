@@ -7,7 +7,7 @@ widoki, funkcje, procedury, triggery
 ---
 
 Imiona i nazwiska autorów :
-Michał, Kościanek Michał Mąka
+Michał Kościanek, Michał Mąka
 ---
 
 <style>
@@ -243,9 +243,31 @@ https://upel.agh.edu.pl/mod/folder/view.php?id=411834
 w szczególności dokumenty: `10_modyf_ora_north.pdf`, `20_ora_plsql_north.pdf`
 
 ```sql
+BEGIN
+--     insertujemy do tabeli reservation poprawne wartości istniejących:wycieczki,osoby,statusu
+    INSERT INTO reservation(trip_id, person_id, status)
+    values (1,5,'P');
+-- tutaj działa commit trasnakcja poprawnie działą, zmiany są potwierdzane i wysyłane do bazy danych
+COMMIT;
+EXCEPTION
+    WHEN OTHERS THEN
+ROLLBACK;
+end;
 
--- przyklady, kod, zrzuty ekranów, komentarz ...
-
+BEGIN
+--     tutaj chcemy dodać do tabeli  reservation  raz nieistniejący trip_id
+-- a potem trip_id:=null oraz osobe o nieistniejącym person_id
+    INSERT INTO reservation(trip_id, person_id, status)
+    values (50,2,'P');
+    INSERT INTO reservation(trip_id, person_id, status)
+    values (null,20,'P');
+COMMIT;
+-- wyjątek się wykonuje
+EXCEPTION
+    WHEN OTHERS THEN
+--         zmiany są wycofywane 
+ROLLBACK;
+end;
 ```
 
 ---
