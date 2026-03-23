@@ -7,7 +7,7 @@ widoki, funkcje, procedury, triggery
 ---
 
 Imiona i nazwiska autorów :
-
+Michał, Kościanek Michał Mąka
 ---
 
 <style>
