@@ -296,10 +296,12 @@ Proponowany zestaw widoków można rozbudować wedle uznania/potrzeb
 # Zadanie 1 - rozwiązanie
 
 ```sql
-
--- wyniki, kod, zrzuty ekranów, komentarz ...
-
-
+CREATE OR REPLACE VIEW vw_reservation as
+SELECT RESERVATION_ID, COUNTRY, TRIP_DATE, TRIP_NAME,
+       FIRSTNAME, LASTNAME, STATUS, r.TRIP_ID, p.PERSON_ID
+FROM RESERVATION r
+JOIN PERSON p on r.PERSON_ID = p.PERSON_ID
+JOIN trip t on r.TRIP_ID = t.TRIP_ID;
 
 ```
 
