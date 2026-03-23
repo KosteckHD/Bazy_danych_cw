@@ -265,8 +265,9 @@ COMMIT;
 -- wyjątek się wykonuje
 EXCEPTION
     WHEN OTHERS THEN
---         zmiany są wycofywane 
-ROLLBACK;
+--         zmiany są wycofywane
+        ROLLBACK;
+        RAISE;
 end;
 ```
 
