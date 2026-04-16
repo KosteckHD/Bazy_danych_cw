@@ -356,7 +356,7 @@ Procedury:
 - `f_trip_participants`
   - zadaniem funkcji jest zwrócenie listy uczestników wskazanej wycieczki
   - parametry funkcji: `trip_id`
-  - funkcja zwraca podobny zestaw danych jak widok `vw_eservation`
+  - funkcja zwraca podobny zestaw danych jak widok `vw_reservation`
 - `f_person_reservations`
   - zadaniem funkcji jest zwrócenie listy rezerwacji danej osoby
   - parametry funkcji: `person_id`
@@ -380,38 +380,37 @@ Proponowany zestaw funkcji można rozbudować wedle uznania/potrzeb
 
 ```sql
 
--- Tworzymy typ obiektowy reprezentujący pojedynczy wiersz rezerwacji
+-- Tworze typ obiektowy reprezentujący pojedynczy wiersz rezerwacji
 CREATE OR REPLACE TYPE t_reservation_rec AS OBJECT (
     reservation_id INT, country VARCHAR2(50), trip_date DATE, trip_name VARCHAR2(100),
     firstname VARCHAR2(50), lastname VARCHAR2(50), status CHAR(1), trip_id INT, person_id INT
 );
 
 
--- Tworzymy typ tabelaryczny (kolekcję) bazujący na powyższym obiekcie
+-- Tworzymy typ tabelaryczny bazujący na typie wierszu powyżej
 CREATE OR REPLACE TYPE t_reservation_tab IS TABLE OF t_reservation_rec;
 
 
--- Typy dla wycieczek (do trzeciej funkcji)
+-- Typy dla wycieczek 
 CREATE OR REPLACE TYPE t_trip_rec AS OBJECT (
     trip_id INT, country VARCHAR2(50), trip_date DATE, trip_name VARCHAR2(100),
     max_no_places INT, no_available_places INT
 );
-
+-- ten sam zabieg co wczesniej
 CREATE OR REPLACE TYPE t_trip_tab IS TABLE OF t_trip_rec;
 
 
--- 1. Funkcja f_trip_participants
 CREATE OR REPLACE FUNCTION f_trip_participants(p_trip_id INT)
 RETURN t_reservation_tab PIPELINED
 IS
     v_count INT;
 BEGIN
-    -- Kontrola parametru
+    -- sprawdzenie czy mamy pasujące wyniki
     SELECT COUNT(*) INTO v_count FROM trip WHERE trip_id = p_trip_id;
     IF v_count = 0 THEN
         RAISE_APPLICATION_ERROR(-20001, 'Wycieczka o podanym ID nie istnieje.');
     END IF;
-
+    -- zwrócenie poprawnego wyniku
     FOR curr IN (SELECT * FROM vw_reservation WHERE trip_id = p_trip_id) LOOP
         PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date,
                  curr.trip_name, curr.firstname, curr.lastname, curr.status, curr.trip_id, curr.person_id));
@@ -420,7 +419,6 @@ BEGIN
 END;
 
 
--- 2. Funkcja f_person_reservations
 CREATE OR REPLACE FUNCTION f_person_reservations(p_person_id INT)
 RETURN t_reservation_tab PIPELINED
 IS
@@ -433,16 +431,15 @@ BEGIN
     RETURN;
 END;
 
-
--- 3. Funkcja f_available_trips_to
 CREATE OR REPLACE FUNCTION f_available_trips_to(p_country VARCHAR2, p_date_from DATE, p_date_to DATE)
 RETURN t_trip_tab PIPELINED
 IS
 BEGIN
+-- sprawdzenie czy data rozpoczecia wycieczki nie jest po dacie zakonczenia
     IF p_date_from > p_date_to THEN
         RAISE_APPLICATION_ERROR(-20002, 'Data OD nie może być późniejsza niż data DO.');
     END IF;
-
+-- zwrocenie tabeli poprawnych wyników
     FOR curr IN (
         SELECT * FROM vw_available_trip
         WHERE country = p_country
@@ -636,7 +633,7 @@ Należy przygotować procedury: `p_add_reservation_4`, `p_modify_reservation_sta
 
 ```sql
 
--- Trigger automatyzujący logowanie do tabeli log
+-- Trigger akutalizując zmiany do tabeli log
 CREATE OR REPLACE TRIGGER trg_reservation_log
 AFTER INSERT OR UPDATE OF status ON reservation
 FOR EACH ROW
@@ -655,7 +652,6 @@ BEGIN
 END;
 
 
--- Aktualizacja procedur (z sufiksem _4) - usunięto jawny kod INSERT INTO log
 CREATE OR REPLACE PROCEDURE p_add_reservation_4(p_trip_id INT, p_person_id INT)
 IS
     v_available_places INT;
@@ -663,11 +659,11 @@ IS
 BEGIN
     SELECT no_available_places, trip_date INTO v_available_places, v_trip_date
     FROM vw_trip WHERE trip_id = p_trip_id;
-
+    -- wyjątek obycia się już wycieczki
     IF v_trip_date <= SYSDATE THEN
         RAISE_APPLICATION_ERROR(-20011, 'Wycieczka już się odbyła lub trwa.');
     END IF;
-
+    -- wyjatek przy brakujacych miejsach wycieczki
     IF v_available_places <= 0 THEN
         RAISE_APPLICATION_ERROR(-20012, 'Brak wolnych miejsc na wycieczkę.');
     END IF;
@@ -689,6 +685,7 @@ BEGIN
 
     IF v_old_status = 'C' AND p_status IN ('N', 'P') THEN
         SELECT no_available_places INTO v_available_places FROM vw_trip WHERE trip_id = v_trip_id;
+        -- warunek sprawdzający czy można zmienić status z odwolanego na nowy/potwierdzony i oplacony spowodowany przez brak miejsc 
         IF v_available_places <= 0 THEN
             RAISE_APPLICATION_ERROR(-20020, 'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
         END IF;
