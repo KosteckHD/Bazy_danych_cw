@@ -495,87 +495,119 @@ Proponowany zestaw procedur można rozbudować wedle uznania/potrzeb
 # Zadanie 3 - rozwiązanie
 
 ```sql
--- 1. Procedura p_add_reservation
-CREATE OR REPLACE PROCEDURE p_add_reservation(p_trip_id INT, p_person_id INT)
+-- p_add_reservation
+CREATE OR REPLACE PROCEDURE p_add_reservation(
+    io_trip_id INT,
+    io_person_id INT
+)
 IS
-    v_available_places INT;
-    v_trip_date DATE;
-    v_reservation_id INT;
+    var_available_places INT;
+    var_trip_date DATE;
+    var_log_reservation_id INT;
+    var_person_check VARCHAR2(100);
 BEGIN
-    -- Sprawdzenie czy wycieczka istnieje i pobranie danych
     BEGIN
-        SELECT no_available_places, trip_date INTO v_available_places, v_trip_date
-        FROM vw_trip WHERE trip_id = p_trip_id;
+        SELECT no_available_places, trip_date
+        INTO var_available_places, var_trip_date
+        FROM vw_trip
+        WHERE trip_id = io_trip_id;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             RAISE_APPLICATION_ERROR(-20010, 'Wycieczka nie istnieje.');
     END;
 
-    IF v_trip_date <= SYSDATE THEN
-        RAISE_APPLICATION_ERROR(-20011, 'Wycieczka już się odbyła lub trwa.');
+    IF var_available_places <= 0 THEN
+        RAISE_APPLICATION_ERROR(-20011, 'Nie ma wolnych miejsc.');
     END IF;
 
-    IF v_available_places <= 0 THEN
-        RAISE_APPLICATION_ERROR(-20012, 'Brak wolnych miejsc na wycieczkę.');
+    IF var_trip_date <= SYSDATE THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Data wycieczki jest w przeszłości.');
     END IF;
 
-    -- Wstawienie rezerwacji (sekwencja w Default wykona się sama)
-    INSERT INTO reservation (trip_id, person_id, status)
-    VALUES (p_trip_id, p_person_id, 'N')
-    RETURNING reservation_id INTO v_reservation_id;
+    BEGIN
+        SELECT LASTNAME INTO var_person_check
+        FROM PERSON WHERE PERSON_ID = io_person_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20013, 'Osoba nie istnieje.');
+    END;
 
-    -- Zapis do logu
-    INSERT INTO log (reservation_id, log_date, status)
-    VALUES (v_reservation_id, SYSDATE, 'N');
+    INSERT INTO RESERVATION (trip_id, person_id, status)
+    VALUES (io_trip_id,io_person_id,'N')
+    RETURNING RESERVATION_ID INTO var_log_reservation_id;
+
+    INSERT INTO LOG (RESERVATION_ID, LOG_DATE, STATUS)
+    VALUES (var_log_reservation_id, SYSDATE, 'N');
 END;
-/
 
--- 2. Procedura p_modify_reservation_status
-CREATE OR REPLACE PROCEDURE p_modify_reservation_status(p_reservation_id INT, p_status CHAR)
+
+-- p_modify_reservation_status
+CREATE OR REPLACE PROCEDURE p_modify_reservation_status (
+    p_reservation_id INT,
+    p_status CHAR
+    )
 IS
-    v_old_status CHAR(1);
-    v_trip_id INT;
-    v_available_places INT;
+    var_old_status CHAR;
+    var_trip_id INT;
+    var_available_places INT;
 BEGIN
-    SELECT status, trip_id INTO v_old_status, v_trip_id
-    FROM reservation WHERE reservation_id = p_reservation_id;
+    SELECT status, trip_id
+        INTO var_old_status, var_trip_id
+    FROM reservation
+    WHERE reservation_id = p_reservation_id;
 
-    -- Kontrola logiki biznesowej przywracania z anulowanej
-    IF v_old_status = 'C' AND p_status IN ('N', 'P') THEN
-        SELECT no_available_places INTO v_available_places
-        FROM vw_trip WHERE trip_id = v_trip_id;
+    -- przywracanie z anulowanej
+    IF var_old_status = 'C' AND p_status IN ('N', 'P') THEN
+        SELECT no_available_places INTO var_available_places
+        FROM vw_trip WHERE trip_id = var_trip_id;
 
-        IF v_available_places <= 0 THEN
-            RAISE_APPLICATION_ERROR(-20020, 'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
+        IF var_available_places <= 0 THEN
+            RAISE_APPLICATION_ERROR(-20020,
+                'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
         END IF;
     END IF;
 
-    -- Aktualizacja statusu
+    -- aktualizacja statusu
     UPDATE reservation SET status = p_status WHERE reservation_id = p_reservation_id;
 
-    -- Zapis do logu
+    -- zapis do logu
     INSERT INTO log (reservation_id, log_date, status)
     VALUES (p_reservation_id, SYSDATE, p_status);
 END;
-/
 
--- 3. Procedura p_modify_max_no_places
-CREATE OR REPLACE PROCEDURE p_modify_max_no_places(p_trip_id INT, p_max_no_places INT)
+
+-- p_modify_max_no_places
+CREATE OR REPLACE PROCEDURE p_modify_max_no_places(
+    input_trip_id INT,
+    input_no_places INT)
 IS
-    v_taken_places INT;
+    var_taken_places INT;
+    var_trip_exists INT; -- do sprawdzenia istnienia danej wycieczki
 BEGIN
-    -- Liczymy aktualnie zajęte miejsca
-    SELECT COUNT(*) INTO v_taken_places
+    SELECT COUNT(*) INTO var_taken_places
     FROM reservation
-    WHERE trip_id = p_trip_id AND status IN ('N', 'P');
+    WHERE trip_id = input_trip_id AND status IN ('N', 'P');
 
-    IF p_max_no_places < v_taken_places THEN
-        RAISE_APPLICATION_ERROR(-20030, 'Nowa maksymalna liczba miejsc nie może być mniejsza niż obecna liczba rezerwacji.');
+    IF input_no_places < var_taken_places THEN
+        RAISE_APPLICATION_ERROR(-20030,
+            'Próba zmiany ilości miejsc na mniejszą niż liczba zarezerwowanych.');
     END IF;
 
-    UPDATE trip SET max_no_places = p_max_no_places WHERE trip_id = p_trip_id;
+
+    SELECT COUNT(*) INTO var_trip_exists FROM trip WHERE trip_id = input_trip_id;
+
+    IF var_trip_exists = 0 THEN
+        RAISE_APPLICATION_ERROR(-20031, 'Nie ma wycieczki o danym ID.');
+    END IF;
+
+    UPDATE trip SET max_no_places = input_no_places WHERE trip_id = input_trip_id;
+
 END;
-/
+
+BEGIN
+    p_modify_max_no_places(2,5);
+end;
+
 ```
 
 ---
