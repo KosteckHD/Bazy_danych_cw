@@ -8,6 +8,7 @@ widoki, funkcje, procedury, triggery
 
 Imiona i nazwiska autorów :
 Michał Kościanek, Michał Mąka
+
 ---
 
 <style>
@@ -297,55 +298,51 @@ Proponowany zestaw widoków można rozbudować wedle uznania/potrzeb
 
 ```sql
 
--- 1. Widok vw_reservation
--- Łączy dane z tabel trip, person i reservation. Ułatwia to późniejsze raportowanie.
+-- vw_reservation
 CREATE OR REPLACE VIEW vw_reservation AS
-SELECT 
-    r.reservation_id, 
-    t.country, 
-    t.trip_date, 
-    t.trip_name, 
-    p.firstname, 
-    p.lastname, 
-    r.status, 
-    t.trip_id, 
+SELECT
+    reservation_id,
+    country,
+    trip_date,
+    trip_name,
+    firstname,
+    lastname,
+    status,
+    t.trip_id,
     p.person_id
 FROM reservation r
 JOIN trip t ON r.trip_id = t.trip_id
 JOIN person p ON r.person_id = p.person_id;
 
--- 2. Widok vw_trip
--- Oblicza liczbę wolnych miejsc. Zakładamy, że statusy 'N' (New) i 'P' (Paid) zajmują miejsca, 
--- a 'C' (Canceled) nie zajmuje miejsca.
+-- vw_trip - pokazanie wolnych miejsc (C - niezliczone)
+
 CREATE OR REPLACE VIEW vw_trip AS
-SELECT 
-    t.trip_id, 
-    t.country, 
-    t.trip_date, 
-    t.trip_name, 
-    t.max_no_places,
-    (t.max_no_places - (
-        SELECT COUNT(*) 
-        FROM reservation r 
-        WHERE r.trip_id = t.trip_id AND r.status IN ('N', 'P')
+SELECT
+    trip_id,
+    country,
+    trip_date,
+    trip_name,
+    max_no_places,
+    (max_no_places - (
+        SELECT COUNT(*)
+        FROM reservation r
+        WHERE r.trip_id = t.trip_id and r.status in ('N', 'P')
     )) AS no_available_places
 FROM trip t;
 
--- 3. Widok vw_available_trip
--- Bazuje na poprzednim widoku, filtrując jedynie wycieczki w przyszłości i z dostępnymi miejscami.
+-- vw_avaliable_trip - vw_trip with time constraint
+
 CREATE OR REPLACE VIEW vw_available_trip AS
-SELECT 
-    trip_id, 
-    country, 
-    trip_date, 
-    trip_name, 
-    max_no_places, 
+SELECT
+    trip_id,
+    country,
+    trip_date,
+    trip_name,
+    max_no_places,
     no_available_places
 FROM vw_trip
-WHERE trip_date > SYSDATE 
-  AND no_available_places > 0;
-
-
+WHERE trip_date > SYSDATE
+AND no_available_places > 0;
 ```
 
 ---
@@ -396,7 +393,7 @@ CREATE OR REPLACE TYPE t_reservation_tab IS TABLE OF t_reservation_rec;
 
 -- Typy dla wycieczek (do trzeciej funkcji)
 CREATE OR REPLACE TYPE t_trip_rec AS OBJECT (
-    trip_id INT, country VARCHAR2(50), trip_date DATE, trip_name VARCHAR2(100), 
+    trip_id INT, country VARCHAR2(50), trip_date DATE, trip_name VARCHAR2(100),
     max_no_places INT, no_available_places INT
 );
 
@@ -404,8 +401,8 @@ CREATE OR REPLACE TYPE t_trip_tab IS TABLE OF t_trip_rec;
 
 
 -- 1. Funkcja f_trip_participants
-CREATE OR REPLACE FUNCTION f_trip_participants(p_trip_id INT) 
-RETURN t_reservation_tab PIPELINED 
+CREATE OR REPLACE FUNCTION f_trip_participants(p_trip_id INT)
+RETURN t_reservation_tab PIPELINED
 IS
     v_count INT;
 BEGIN
@@ -416,7 +413,7 @@ BEGIN
     END IF;
 
     FOR curr IN (SELECT * FROM vw_reservation WHERE trip_id = p_trip_id) LOOP
-        PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date, 
+        PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date,
                  curr.trip_name, curr.firstname, curr.lastname, curr.status, curr.trip_id, curr.person_id));
     END LOOP;
     RETURN;
@@ -424,13 +421,13 @@ END;
 
 
 -- 2. Funkcja f_person_reservations
-CREATE OR REPLACE FUNCTION f_person_reservations(p_person_id INT) 
-RETURN t_reservation_tab PIPELINED 
+CREATE OR REPLACE FUNCTION f_person_reservations(p_person_id INT)
+RETURN t_reservation_tab PIPELINED
 IS
 BEGIN
     -- Pominąłem kontrolę parametru dla zwięzłości, ale można ją dodać analogicznie
     FOR curr IN (SELECT * FROM vw_reservation WHERE person_id = p_person_id) LOOP
-        PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date, 
+        PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date,
                  curr.trip_name, curr.firstname, curr.lastname, curr.status, curr.trip_id, curr.person_id));
     END LOOP;
     RETURN;
@@ -438,8 +435,8 @@ END;
 
 
 -- 3. Funkcja f_available_trips_to
-CREATE OR REPLACE FUNCTION f_available_trips_to(p_country VARCHAR2, p_date_from DATE, p_date_to DATE) 
-RETURN t_trip_tab PIPELINED 
+CREATE OR REPLACE FUNCTION f_available_trips_to(p_country VARCHAR2, p_date_from DATE, p_date_to DATE)
+RETURN t_trip_tab PIPELINED
 IS
 BEGIN
     IF p_date_from > p_date_to THEN
@@ -447,11 +444,11 @@ BEGIN
     END IF;
 
     FOR curr IN (
-        SELECT * FROM vw_available_trip 
-        WHERE country = p_country 
+        SELECT * FROM vw_available_trip
+        WHERE country = p_country
           AND trip_date BETWEEN p_date_from AND p_date_to
     ) LOOP
-        PIPE ROW(t_trip_rec(curr.trip_id, curr.country, curr.trip_date, 
+        PIPE ROW(t_trip_rec(curr.trip_id, curr.country, curr.trip_date,
                  curr.trip_name, curr.max_no_places, curr.no_available_places));
     END LOOP;
     RETURN;
@@ -499,7 +496,7 @@ Proponowany zestaw procedur można rozbudować wedle uznania/potrzeb
 
 ```sql
 -- 1. Procedura p_add_reservation
-CREATE OR REPLACE PROCEDURE p_add_reservation(p_trip_id INT, p_person_id INT) 
+CREATE OR REPLACE PROCEDURE p_add_reservation(p_trip_id INT, p_person_id INT)
 IS
     v_available_places INT;
     v_trip_date DATE;
@@ -507,7 +504,7 @@ IS
 BEGIN
     -- Sprawdzenie czy wycieczka istnieje i pobranie danych
     BEGIN
-        SELECT no_available_places, trip_date INTO v_available_places, v_trip_date 
+        SELECT no_available_places, trip_date INTO v_available_places, v_trip_date
         FROM vw_trip WHERE trip_id = p_trip_id;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
@@ -534,20 +531,20 @@ END;
 /
 
 -- 2. Procedura p_modify_reservation_status
-CREATE OR REPLACE PROCEDURE p_modify_reservation_status(p_reservation_id INT, p_status CHAR) 
+CREATE OR REPLACE PROCEDURE p_modify_reservation_status(p_reservation_id INT, p_status CHAR)
 IS
     v_old_status CHAR(1);
     v_trip_id INT;
     v_available_places INT;
 BEGIN
-    SELECT status, trip_id INTO v_old_status, v_trip_id 
+    SELECT status, trip_id INTO v_old_status, v_trip_id
     FROM reservation WHERE reservation_id = p_reservation_id;
 
     -- Kontrola logiki biznesowej przywracania z anulowanej
     IF v_old_status = 'C' AND p_status IN ('N', 'P') THEN
-        SELECT no_available_places INTO v_available_places 
+        SELECT no_available_places INTO v_available_places
         FROM vw_trip WHERE trip_id = v_trip_id;
-        
+
         IF v_available_places <= 0 THEN
             RAISE_APPLICATION_ERROR(-20020, 'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
         END IF;
@@ -563,13 +560,13 @@ END;
 /
 
 -- 3. Procedura p_modify_max_no_places
-CREATE OR REPLACE PROCEDURE p_modify_max_no_places(p_trip_id INT, p_max_no_places INT) 
+CREATE OR REPLACE PROCEDURE p_modify_max_no_places(p_trip_id INT, p_max_no_places INT)
 IS
     v_taken_places INT;
 BEGIN
     -- Liczymy aktualnie zajęte miejsca
-    SELECT COUNT(*) INTO v_taken_places 
-    FROM reservation 
+    SELECT COUNT(*) INTO v_taken_places
+    FROM reservation
     WHERE trip_id = p_trip_id AND status IN ('N', 'P');
 
     IF p_max_no_places < v_taken_places THEN
@@ -627,12 +624,12 @@ END;
 
 
 -- Aktualizacja procedur (z sufiksem _4) - usunięto jawny kod INSERT INTO log
-CREATE OR REPLACE PROCEDURE p_add_reservation_4(p_trip_id INT, p_person_id INT) 
+CREATE OR REPLACE PROCEDURE p_add_reservation_4(p_trip_id INT, p_person_id INT)
 IS
     v_available_places INT;
     v_trip_date DATE;
 BEGIN
-    SELECT no_available_places, trip_date INTO v_available_places, v_trip_date 
+    SELECT no_available_places, trip_date INTO v_available_places, v_trip_date
     FROM vw_trip WHERE trip_id = p_trip_id;
 
     IF v_trip_date <= SYSDATE THEN
@@ -649,13 +646,13 @@ BEGIN
 END;
 
 
-CREATE OR REPLACE PROCEDURE p_modify_reservation_status_4(p_reservation_id INT, p_status CHAR) 
+CREATE OR REPLACE PROCEDURE p_modify_reservation_status_4(p_reservation_id INT, p_status CHAR)
 IS
     v_old_status CHAR(1);
     v_trip_id INT;
     v_available_places INT;
 BEGIN
-    SELECT status, trip_id INTO v_old_status, v_trip_id 
+    SELECT status, trip_id INTO v_old_status, v_trip_id
     FROM reservation WHERE reservation_id = p_reservation_id;
 
     IF v_old_status = 'C' AND p_status IN ('N', 'P') THEN
@@ -722,10 +719,10 @@ COMPOUND TRIGGER
         FOR i IN 1 .. v_modified_trips.COUNT LOOP
             -- W tym momencie vw_trip ma już przeliczone dane z uwzględnieniem naszych nowych wierszy!
             -- Jeśli wynik jest mniejszy od zera, oznacza to, że weszliśmy na overbooking.
-            SELECT no_available_places INTO v_places 
-            FROM vw_trip 
+            SELECT no_available_places INTO v_places
+            FROM vw_trip
             WHERE trip_id = v_modified_trips(i);
-            
+
             IF v_places < 0 THEN
                 RAISE_APPLICATION_ERROR(-20050, 'Brak wolnych miejsc na tę wycieczkę. Operacja odrzucona.');
             END IF;
@@ -734,7 +731,7 @@ COMPOUND TRIGGER
 END trg_check_places_compound;
 /
 
-CREATE OR REPLACE PROCEDURE p_add_reservation_5(p_trip_id INT, p_person_id INT) 
+CREATE OR REPLACE PROCEDURE p_add_reservation_5(p_trip_id INT, p_person_id INT)
 IS
     v_trip_date DATE;
 BEGIN
@@ -750,7 +747,7 @@ BEGIN
 END;
 /
 
-CREATE OR REPLACE PROCEDURE p_modify_reservation_status_5(p_reservation_id INT, p_status CHAR) 
+CREATE OR REPLACE PROCEDURE p_modify_reservation_status_5(p_reservation_id INT, p_status CHAR)
 IS
 BEGIN
     -- Zmiana statusu od razu. Wszelkie weryfikacje miejsc wykona trigger.
