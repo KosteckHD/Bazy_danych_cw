@@ -229,7 +229,7 @@ proszę pamiętać o zatwierdzeniu transakcji
 
 ---
 
-# Zadanie 0 - modyfikacja danych, transakcje
+# Zadanie 0 - modyfikacja danych, transakcje, wykonał:Michał Kościanek review: Michał Mąka
 
 Należy przeprowadzić kilka eksperymentów związanych ze wstawianiem, modyfikacją i usuwaniem danych
 oraz wykorzystaniem transakcji
@@ -294,7 +294,7 @@ Proponowany zestaw widoków można rozbudować wedle uznania/potrzeb
 - np. można dodać nowe/pomocnicze widoki, funkcje
 - np. można zmienić def. widoków, dodając nowe/potrzebne pola
 
-# Zadanie 1 - rozwiązanie
+# Zadanie 1 - rozwiązanie,wykonał:Michał Mąka review: Michał Kościanek
 
 ```sql
 
@@ -376,7 +376,7 @@ Proponowany zestaw funkcji można rozbudować wedle uznania/potrzeb
 
 - np. można dodać nowe/pomocnicze funkcje/procedury
 
-# Zadanie 2 - rozwiązanie
+# Zadanie 2 - rozwiązanie, wykonał:Michał Kościanek review: Michał Mąka
 
 ```sql
 
@@ -489,7 +489,7 @@ Proponowany zestaw procedur można rozbudować wedle uznania/potrzeb
 
 - np. można dodać nowe/pomocnicze funkcje/procedury
 
-# Zadanie 3 - rozwiązanie
+# Zadanie 3 - rozwiązanie, wykonał:Michał Mąka review: Michał Kościanek
 
 ```sql
 -- p_add_reservation
@@ -609,7 +609,7 @@ end;
 
 ---
 
-# Zadanie 4 - triggery
+# Zadanie 4 - triggery, wykonał:Michał Kościanek review: Michał Mąka
 
 Zmiana strategii zapisywania do dziennika rezerwacji. Realizacja przy pomocy triggerów
 
@@ -718,7 +718,7 @@ Oczywiście po wprowadzeniu tej zmiany należy "uaktualnić" procedury modyfikuj
 
 Należy przygotować procedury: `p_add_reservation_5`, `p_modify_reservation_status_5`, ...
 
-# Zadanie 5 - rozwiązanie
+# Zadanie 5 - rozwiązanie, wykonał:Michał Mąka review: Michał Kościanek
 
 ```sql
 
