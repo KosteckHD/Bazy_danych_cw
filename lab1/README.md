@@ -556,10 +556,13 @@ IS
     var_trip_id INT;
     var_available_places INT;
 BEGIN
-    SELECT status, trip_id
-        INTO var_old_status, var_trip_id
-    FROM reservation
-    WHERE reservation_id = input_reservation_id;
+    BEGIN
+        SELECT status, trip_id INTO var_old_status, var_trip_id
+        FROM reservation WHERE reservation_id = input_reservation_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20021, 'Nie istnieje rezerwacja o podanym ID.');
+    END;
 
     -- przywracanie z anulowanej
     IF var_old_status = 'C' AND input_status IN ('N', 'P') THEN
@@ -669,8 +672,16 @@ IS
     var_available_places INT;
     var_trip_date DATE;
 BEGIN
-    SELECT no_available_places, trip_date INTO var_available_places, var_trip_date
-    FROM vw_trip WHERE trip_id = input_trip_id;
+    BEGIN
+        SELECT no_available_places, trip_date
+            INTO var_available_places, var_trip_date
+        FROM vw_trip
+        WHERE trip_id = input_trip_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20010, 'Wycieczka nie istnieje.');
+    END;
+
     -- wyjątek obycia się już wycieczki
     IF var_trip_date <= SYSDATE THEN
         RAISE_APPLICATION_ERROR(-20011, 'Wycieczka już się odbyła lub trwa.');
@@ -685,7 +696,6 @@ BEGIN
     VALUES (input_trip_id, input_person_id, 'N');
 END;
 
-
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_4(
     input_reservation_id INT,
     input_status CHAR)
@@ -694,8 +704,13 @@ IS
     var_trip_id INT;
     var_available_places INT;
 BEGIN
-    SELECT status, trip_id INTO var_old_status, var_trip_id
-    FROM reservation WHERE reservation_id = input_reservation_id;
+    BEGIN
+        SELECT status, trip_id INTO var_old_status, var_trip_id
+        FROM reservation WHERE reservation_id = input_reservation_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20021, 'Nie istnieje rezerwacja o podanym ID.');
+    END;
 
     IF var_old_status = 'C' AND input_status IN ('N', 'P') THEN
         SELECT no_available_places INTO var_available_places FROM vw_trip WHERE trip_id = var_trip_id;
@@ -708,6 +723,7 @@ BEGIN
     -- Log zostanie wpisany przez trigger
     UPDATE reservation SET status = input_status WHERE reservation_id = input_reservation_id;
 END;
+
 
 ```
 
@@ -807,7 +823,7 @@ END;
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_5(
     input_reservation_id INT,
     input_status CHAR
-)
+    )
 IS
 BEGIN
     UPDATE reservation
