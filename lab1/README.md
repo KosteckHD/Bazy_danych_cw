@@ -733,68 +733,89 @@ Należy przygotować procedury: `p_add_reservation_5`, `p_modify_reservation_sta
 ## wykonał: Michał Mąka | review: Michał Kościanek
 
 ```sql
-
--- Wyzwalacz złożony rozwiązujący problem mutating table
-CREATE OR REPLACE TRIGGER trg_check_places_compound
+-- trigger sprawdzający ilosc wolnych miejsc
+CREATE OR REPLACE TRIGGER trg_check_available_places
 FOR INSERT OR UPDATE OF status ON reservation
 COMPOUND TRIGGER
 
-    -- Kolekcja przechowująca ID wycieczek, które zostały naruszone w danej transakcji
-    TYPE t_trip_ids IS TABLE OF trip.trip_id%TYPE;
-    v_modified_trips t_trip_ids := t_trip_ids();
+    -- v_trips - lista ID wycieczek aktualizowanych, na wiele naraz
+    TYPE t_trip_list IS TABLE OF INT INDEX BY PLS_INTEGER;
+    v_trips t_trip_list;
+    v_idx INT := 1;
 
-    -- Po każdym zmodyfikowanym wierszu zapisujemy ID wycieczki do zbadania
-    AFTER EACH ROW IS
+    BEFORE EACH ROW IS
     BEGIN
-        -- Interesuje nas tylko wstawienie lub zmiana z C na coś innego (czyli zabranie miejsca)
-        IF INSERTING OR (UPDATING AND :OLD.status = 'C' AND :NEW.status IN ('N', 'P')) THEN
-            v_modified_trips.EXTEND;
-            v_modified_trips(v_modified_trips.LAST) := :NEW.trip_id;
+        -- zliczamy jezeli dodane nowe ok rezerwacje
+        IF INSERTING AND :NEW.status IN ('N', 'P') THEN
+            v_trips(v_idx) := :NEW.trip_id;
+            v_idx := v_idx + 1;
+        -- zliczamy dodatkowo, jeżeli z stan zmienia sie z anulowanej
+        ELSIF UPDATING AND :OLD.status = 'C' AND :NEW.status IN ('N', 'P') THEN
+            v_trips(v_idx) := :NEW.trip_id;
+            v_idx := v_idx + 1;
         END IF;
-    END AFTER EACH ROW;
+    END BEFORE EACH ROW;
 
-    -- Po zakończeniu całego polecenia (tabela już nie "mutuje") sprawdzamy miejsca
+    -- sprawdzenie po aktualizacji ile jest wolnych miejsc
     AFTER STATEMENT IS
-        v_places INT;
+        v_available_places INT;
     BEGIN
-        FOR i IN 1 .. v_modified_trips.COUNT LOOP
-            -- W tym momencie vw_trip ma już przeliczone dane z uwzględnieniem naszych nowych wierszy!
-            -- Jeśli wynik jest mniejszy od zera, oznacza to, że weszliśmy na overbooking.
-            SELECT no_available_places INTO v_places
+        FOR i IN 1 .. v_trips.COUNT LOOP
+            SELECT no_available_places INTO v_available_places
             FROM vw_trip
-            WHERE trip_id = v_modified_trips(i);
+            WHERE trip_id = v_trips(i);
 
-            IF v_places < 0 THEN
-                RAISE_APPLICATION_ERROR(-20050, 'Brak wolnych miejsc na tę wycieczkę. Operacja odrzucona.');
+            IF v_available_places < 0 THEN
+                RAISE_APPLICATION_ERROR(-20050,
+                    'Brak wolnych miejsc - trigger.');
             END IF;
         END LOOP;
+
     END AFTER STATEMENT;
-END trg_check_places_compound;
-/
 
-CREATE OR REPLACE PROCEDURE p_add_reservation_5(p_trip_id INT, p_person_id INT)
+END trg_check_available_places;
+
+
+CREATE OR REPLACE PROCEDURE p_add_reservation_5(
+    input_trip_id INT,
+    input_person_id INT
+)
 IS
-    v_trip_date DATE;
+    var_trip_date DATE;
 BEGIN
-    SELECT trip_date INTO v_trip_date FROM trip WHERE trip_id = p_trip_id;
+    BEGIN
+        SELECT trip_date
+            INTO var_trip_date
+        FROM trip
+        WHERE trip_id = input_trip_id;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RAISE_APPLICATION_ERROR(-20010, 'Wycieczka nie istnieje.');
+    END;
 
-    IF v_trip_date <= SYSDATE THEN
-        RAISE_APPLICATION_ERROR(-20011, 'Wycieczka już się odbyła lub trwa.');
+    IF var_trip_date <= SYSDATE THEN
+        RAISE_APPLICATION_ERROR(-20012, 'Data wycieczki jest w przeszłości.');
     END IF;
 
-    -- Kontrolę miejsc w całości przejmuje trg_check_places_compound
-    INSERT INTO reservation (trip_id, person_id, status)
-    VALUES (p_trip_id, p_person_id, 'N');
+    INSERT INTO RESERVATION (trip_id, person_id, status)
+    VALUES (input_trip_id,input_person_id,'N');
 END;
-/
 
-CREATE OR REPLACE PROCEDURE p_modify_reservation_status_5(p_reservation_id INT, p_status CHAR)
+CREATE OR REPLACE PROCEDURE p_modify_reservation_status_5(
+    input_reservation_id INT,
+    input_status CHAR
+)
 IS
 BEGIN
-    -- Zmiana statusu od razu. Wszelkie weryfikacje miejsc wykona trigger.
-    UPDATE reservation SET status = p_status WHERE reservation_id = p_reservation_id;
+    UPDATE reservation
+    SET status = input_status
+    WHERE reservation_id = input_reservation_id;
+
+    -- sql%rowcount - ile zmienilo sie wierszy przez procedure
+    IF SQL%ROWCOUNT = 0 THEN
+        RAISE_APPLICATION_ERROR(-20021, 'Nie istnieje rezerwacja o podanym ID.');
+    END IF;
 END;
-/
 
 ```
 
