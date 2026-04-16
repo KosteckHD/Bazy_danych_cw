@@ -229,7 +229,9 @@ proszę pamiętać o zatwierdzeniu transakcji
 
 ---
 
-# Zadanie 0 - modyfikacja danych, transakcje, wykonał:Michał Kościanek review: Michał Mąka
+# Zadanie 0 - modyfikacja danych, transakcje,
+
+## wykonał: Michał Kościanek | review: Michał Mąka
 
 Należy przeprowadzić kilka eksperymentów związanych ze wstawianiem, modyfikacją i usuwaniem danych
 oraz wykorzystaniem transakcji
@@ -294,7 +296,9 @@ Proponowany zestaw widoków można rozbudować wedle uznania/potrzeb
 - np. można dodać nowe/pomocnicze widoki, funkcje
 - np. można zmienić def. widoków, dodając nowe/potrzebne pola
 
-# Zadanie 1 - rozwiązanie,wykonał:Michał Mąka review: Michał Kościanek
+# Zadanie 1 - rozwiązanie
+
+## wykonał: Michał Mąka | review: Michał Kościanek
 
 ```sql
 
@@ -376,7 +380,9 @@ Proponowany zestaw funkcji można rozbudować wedle uznania/potrzeb
 
 - np. można dodać nowe/pomocnicze funkcje/procedury
 
-# Zadanie 2 - rozwiązanie, wykonał:Michał Kościanek review: Michał Mąka
+# Zadanie 2 - rozwiązanie
+
+## wykonał: Michał Kościanek | review: Michał Mąka
 
 ```sql
 
@@ -391,7 +397,7 @@ CREATE OR REPLACE TYPE t_reservation_rec AS OBJECT (
 CREATE OR REPLACE TYPE t_reservation_tab IS TABLE OF t_reservation_rec;
 
 
--- Typy dla wycieczek 
+-- Typy dla wycieczek
 CREATE OR REPLACE TYPE t_trip_rec AS OBJECT (
     trip_id INT, country VARCHAR2(50), trip_date DATE, trip_name VARCHAR2(100),
     max_no_places INT, no_available_places INT
@@ -489,7 +495,9 @@ Proponowany zestaw procedur można rozbudować wedle uznania/potrzeb
 
 - np. można dodać nowe/pomocnicze funkcje/procedury
 
-# Zadanie 3 - rozwiązanie, wykonał:Michał Mąka review: Michał Kościanek
+# Zadanie 3 - rozwiązanie
+
+## wykonał: Michał Mąka | review: Michał Kościanek
 
 ```sql
 -- p_add_reservation
@@ -609,7 +617,7 @@ end;
 
 ---
 
-# Zadanie 4 - triggery, wykonał:Michał Kościanek review: Michał Mąka
+# Zadanie 4 - triggery
 
 Zmiana strategii zapisywania do dziennika rezerwacji. Realizacja przy pomocy triggerów
 
@@ -630,6 +638,8 @@ Oczywiście po wprowadzeniu tej zmiany należy "uaktualnić" procedury modyfikuj
 Należy przygotować procedury: `p_add_reservation_4`, `p_modify_reservation_status_4` , `p_modify_reservation_4`
 
 # Zadanie 4 - rozwiązanie
+
+## wykonał: Michał Kościanek | review: Michał Mąka
 
 ```sql
 
@@ -685,7 +695,7 @@ BEGIN
 
     IF v_old_status = 'C' AND p_status IN ('N', 'P') THEN
         SELECT no_available_places INTO v_available_places FROM vw_trip WHERE trip_id = v_trip_id;
-        -- warunek sprawdzający czy można zmienić status z odwolanego na nowy/potwierdzony i oplacony spowodowany przez brak miejsc 
+        -- warunek sprawdzający czy można zmienić status z odwolanego na nowy/potwierdzony i oplacony spowodowany przez brak miejsc
         IF v_available_places <= 0 THEN
             RAISE_APPLICATION_ERROR(-20020, 'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
         END IF;
@@ -718,7 +728,9 @@ Oczywiście po wprowadzeniu tej zmiany należy "uaktualnić" procedury modyfikuj
 
 Należy przygotować procedury: `p_add_reservation_5`, `p_modify_reservation_status_5`, ...
 
-# Zadanie 5 - rozwiązanie, wykonał:Michał Mąka review: Michał Kościanek
+# Zadanie 5 - rozwiązanie
+
+## wykonał: Michał Mąka | review: Michał Kościanek
 
 ```sql
 
