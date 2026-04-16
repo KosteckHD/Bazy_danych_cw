@@ -825,8 +825,12 @@ END;
 
 Porównaj sposób programowania w systemie Oracle PL/SQL ze znanym ci systemem/językiem MS Sqlserver T-SQL
 
-```sql
+```
+Zmiany względem Ms Sqlserver T-SQL:
 
--- komentarz ...
-
+- Jawne commitowanie zmian do bazy (commit / rollback)
+- brak `BEGIN TRANSACTION` przy transakcjach/procedurach
+- w procedurach zmienne tylko na początku
+- triggery po wierszach (FOR EACH ROW)
+- obsluga :NEW, :OLD przed i po triggerze
 ```
