@@ -8,7 +8,7 @@ widoki, funkcje, procedury, triggery
 
 ---
 
-Imiona i nazwiska autorów : Michał Kościanek,Michał Mąka
+Imiona i nazwiska autorów : Michał Kościanek, Michał Mąka
 
 ---
 
@@ -57,16 +57,9 @@ alter table trip add
 
 ```sql
 
--- Dodanie pola redundantnego do tabeli wycieczek
-ALTER TABLE trip ADD no_available_places INT NULL;
-
--- Komentarz: Pole na początku zezwala na NULL, aby umożliwić aktualizację 
--- dla istniejących rekordów przed nałożeniem ewentualnych restrykcji.
-
-CREATE OR REPLACE PROCEDURE p_recalculate_places_6 AS
+CREATE OR REPLACE PROCEDURE p_calc_avaliable_places AS
 BEGIN
-    -- Przeliczamy wolne miejsca dla każdej wycieczki na podstawie aktualnych rezerwacji
-    -- Zakładamy, że statusy 'N' i 'P' zajmują miejsce, 'C' (Canceled) nie zajmuje.
+    -- przeliczamy wolne miejsca dla każdej wycieczki z informacji o rezerwacjach
     UPDATE trip t
     SET t.no_available_places = t.max_no_places - (
         SELECT COUNT(*)
@@ -74,17 +67,13 @@ BEGIN
         WHERE r.trip_id = t.trip_id
           AND r.status IN ('N', 'P')
     );
-    
-    -- Zatwierdzamy zmiany w strukturze danych
-    COMMIT;
 END;
-/
 
--- Wykonanie procedury inicjalizującej
+
 BEGIN
-    p_recalculate_places_6;
+    p_calc_avaliable_places;
 END;
-/
+
 ```
 
 ---
@@ -106,90 +95,92 @@ Obsługę pola `no_available_places` należy zrealizować przy pomocy procedur
 
 ```sql
 
--- Uproszczony widok wykorzystujący pole redundantne
 CREATE OR REPLACE VIEW vw_trip_6a AS
-SELECT 
-    trip_id, 
-    trip_name, 
-    country, 
-    trip_date, 
-    max_no_places, 
+SELECT
+    trip_id,
+    trip_name,
+    country,
+    trip_date,
+    max_no_places,
     no_available_places
 FROM trip;
 
--- Procedura dodająca rezerwację z ręczną aktualizacją licznika
+-- dodanie rezerwacji z licznikiem miejsc
 CREATE OR REPLACE PROCEDURE p_add_reservation_6a(
-    p_trip_id INT, 
+    p_trip_id INT,
     p_person_id INT
 ) IS
     v_available INT;
 BEGIN
-    -- Pobieramy liczbę miejsc bezpośrednio z tabeli trip (zamiast z widoku przeliczanego)
-    SELECT no_available_places INTO v_available 
+    SELECT no_available_places INTO v_available
     FROM trip WHERE trip_id = p_trip_id;
 
     IF v_available <= 0 THEN
-        RAISE_APPLICATION_ERROR(-20100, 'Brak wolnych miejsc.');
+        RAISE_APPLICATION_ERROR(-20060, 'Brak wolnych miejsc.');
     END IF;
 
-    -- Dodajemy rezerwację
-    INSERT INTO reservation (trip_id, person_id, status)
-    VALUES (p_trip_id, p_person_id, 'N');
+    INSERT INTO RESERVATION (trip_id, person_id, status)
+    VALUES (input_trip_id,input_person_id,'N')
+    RETURNING RESERVATION_ID INTO var_log_reservation_id;
 
-    -- Ręczna aktualizacja redundantnego pola
-    UPDATE trip 
+    INSERT INTO LOG (RESERVATION_ID, LOG_DATE, STATUS)
+    VALUES (var_log_reservation_id, SYSDATE, 'N');
+
+    -- ustawienie miejsc w trip
+    UPDATE trip
     SET no_available_places = no_available_places - 1
     WHERE trip_id = p_trip_id;
-
-    -- Logowanie zmian (jeśli triggery z zad 4 są wyłączone, należy dodać INSERT do log tutaj)
 END;
-/
 
--- Procedura zmiany statusu
+
+-- procedura zmiany statusu
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_6a(
-    p_reservation_id INT, 
+    p_reservation_id INT,
     p_new_status CHAR
 ) IS
-    v_old_status CHAR(1);
+    v_old_status CHAR;
     v_trip_id INT;
 BEGIN
-    SELECT status, trip_id INTO v_old_status, v_trip_id 
+    SELECT status, trip_id INTO v_old_status, v_trip_id
     FROM reservation WHERE reservation_id = p_reservation_id;
 
-    -- Jeśli zmieniamy z anulowanej na aktywną (zajmujemy miejsce)
+    -- anulowana -> aktualna
     IF v_old_status = 'C' AND p_new_status IN ('N', 'P') THEN
         UPDATE trip SET no_available_places = no_available_places - 1 WHERE trip_id = v_trip_id;
-    -- Jeśli anulujemy aktywną (zwalniamy miejsce)
+    -- aktualna -> anulowana
     ELSIF v_old_status IN ('N', 'P') AND p_new_status = 'C' THEN
         UPDATE trip SET no_available_places = no_available_places + 1 WHERE trip_id = v_trip_id;
     END IF;
 
-    UPDATE reservation SET status = p_new_status WHERE reservation_id = p_reservation_id;
+    UPDATE reservation
+    SET status = p_new_status
+    WHERE reservation_id = p_reservation_id;
 END;
-/
 
--- Procedura zmiany max_no_places
+
+-- Procedura zmiany maksymalnej ilosci wolnych miejsc
 CREATE OR REPLACE PROCEDURE p_modify_max_no_places_6a(
-    p_trip_id INT, 
+    p_trip_id INT,
     p_new_max INT
 ) IS
-    v_active_count INT;
+    v_taken_places INT;
 BEGIN
-    -- Liczymy aktywne rezerwacje, aby sprawdzić czy nowy limit nie jest za mały
-    SELECT (max_no_places - no_available_places) INTO v_active_count
-    FROM trip WHERE trip_id = p_trip_id;
+    SELECT (max_no_places - no_available_places) INTO v_taken_places
+    FROM trip
+    WHERE trip_id = p_trip_id;
 
-    IF p_new_max < v_active_count THEN
-        RAISE_APPLICATION_ERROR(-20101, 'Nowy limit jest mniejszy niż liczba istniejących rezerwacji.');
+    IF p_new_max < v_taken_places THEN
+        RAISE_APPLICATION_ERROR(-20061,
+            'Próba zmiany ilości miejsc na mniejszą niż liczba zarezerwowanych.');
     END IF;
 
-    -- Aktualizujemy limit i przeliczamy wolne miejsca
-    UPDATE trip 
+    -- aktualizacja + obliczenie nowych miejsc zajetych
+    UPDATE trip
     SET max_no_places = p_new_max,
-        no_available_places = p_new_max - v_active_count
+        no_available_places = p_new_max - v_taken_places
     WHERE trip_id = p_trip_id;
 END;
-/
+
 ```
 
 ---
@@ -222,37 +213,37 @@ BEGIN
     -- Przypadek 1: Nowa rezerwacja (zajmuje miejsce)
     IF INSERTING THEN
         IF :NEW.status IN ('N', 'P') THEN
-            UPDATE trip 
-            SET no_available_places = no_available_places - 1 
+            UPDATE trip
+            SET no_available_places = no_available_places - 1
             WHERE trip_id = :NEW.trip_id;
         END IF;
-    
+
     -- Przypadek 2: Zmiana statusu
     ELSIF UPDATING THEN
         -- Zwalnianie miejsca (aktywna -> anulowana)
         IF :OLD.status IN ('N', 'P') AND :NEW.status = 'C' THEN
-            UPDATE trip 
-            SET no_available_places = no_available_places + 1 
+            UPDATE trip
+            SET no_available_places = no_available_places + 1
             WHERE trip_id = :NEW.trip_id;
         -- Zajmowanie miejsca (anulowana -> aktywna)
         ELSIF :OLD.status = 'C' AND :NEW.status IN ('N', 'P') THEN
-            UPDATE trip 
-            SET no_available_places = no_available_places - 1 
+            UPDATE trip
+            SET no_available_places = no_available_places - 1
             WHERE trip_id = :NEW.trip_id;
         END IF;
     END IF;
 END;
-/
+
 -- Procedura dodająca rezerwację - teraz znacznie prostsza
 CREATE OR REPLACE PROCEDURE p_add_reservation_6b(
-    p_trip_id INT, 
+    p_trip_id INT,
     p_person_id INT
 ) IS
     v_available INT;
 BEGIN
     -- Sprawdzamy dostępność przed wstawieniem
     SELECT no_available_places INTO v_available FROM trip WHERE trip_id = p_trip_id;
-    
+
     IF v_available <= 0 THEN
         RAISE_APPLICATION_ERROR(-20200, 'Brak miejsc (Trigger 6b).');
     END IF;
@@ -261,16 +252,16 @@ BEGIN
     INSERT INTO reservation (trip_id, person_id, status)
     VALUES (p_trip_id, p_person_id, 'N');
 END;
-/
+
 
 -- Procedura zmiany statusu
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_6b(
-    p_reservation_id INT, 
+    p_reservation_id INT,
     p_status CHAR
 ) IS
 BEGIN
     -- Procedura nie musi wiedzieć o polu no_available_places
     UPDATE reservation SET status = p_status WHERE reservation_id = p_reservation_id;
 END;
-/
+
 ```
