@@ -661,7 +661,8 @@ CREATE OR REPLACE TRIGGER trg_reservation_prevent_del
 BEFORE DELETE ON reservation
 FOR EACH ROW
 BEGIN
-    RAISE_APPLICATION_ERROR(-20040, 'Usuwanie rezerwacji jest zablokowane. Zmień status na C (Canceled).');
+    RAISE_APPLICATION_ERROR(-20040,
+        'Usuwanie rezerwacji jest zablokowane. Zmień status na C (Canceled).');
 END;
 
 
@@ -713,15 +714,19 @@ BEGIN
     END;
 
     IF var_old_status = 'C' AND input_status IN ('N', 'P') THEN
-        SELECT no_available_places INTO var_available_places FROM vw_trip WHERE trip_id = var_trip_id;
-        -- warunek sprawdzający czy można zmienić status z odwolanego na nowy/potwierdzony i oplacony spowodowany przez brak miejsc
+        SELECT no_available_places INTO var_available_places
+        FROM vw_trip WHERE trip_id = var_trip_id;
+        -- warunek sprawdzający czy można zmienić status z odwolanego na
+        -- nowy/potwierdzony i oplacony spowodowany przez brak miejsc
         IF var_available_places <= 0 THEN
-            RAISE_APPLICATION_ERROR(-20020, 'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
+            RAISE_APPLICATION_ERROR(-20020,
+                'Nie można przywrócić rezerwacji. Brak wolnych miejsc.');
         END IF;
     END IF;
 
     -- Log zostanie wpisany przez trigger
-    UPDATE reservation SET status = input_status WHERE reservation_id = input_reservation_id;
+    UPDATE reservation SET status = input_status
+    WHERE reservation_id = input_reservation_id;
 END;
 
 
