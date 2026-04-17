@@ -55,6 +55,8 @@ alter table trip add
 
 # Zadanie 6 - rozwiązanie
 
+## wykonał: Michał Mąka | review: Michał Kościanek
+
 ```sql
 
 CREATE OR REPLACE PROCEDURE p_calc_avaliable_places AS
@@ -92,6 +94,8 @@ Obsługę pola `no_available_places` należy zrealizować przy pomocy procedur
 - może być potrzebne wyłączenie 'poprzednich wersji' triggerów
 
 # Zadanie 6a - rozwiązanie
+
+## wykonał: Michał Mąka | review: Michał Kościanek
 
 ```sql
 
@@ -200,13 +204,15 @@ Obsługę pola `no_available_places` należy zrealizować przy pomocy triggerów
 
 # Zadanie 6b - rozwiązanie
 
+## wykonał: Michał Kościanek | review: Michał Mąka
+
 ```sql
--- trigger na zmiane statusu w rezerwacjach
+-- Trigger na zmiane statusu w rezerwacjach
 CREATE OR REPLACE TRIGGER trg_manage_places_6b
 AFTER INSERT OR UPDATE OF status ON reservation
 FOR EACH ROW
 BEGIN
-    -- dodanie rezerwacji
+    -- Dodanie rezerwacji
     IF INSERTING THEN
         IF :NEW.status IN ('N', 'P') THEN
             UPDATE trip
@@ -214,14 +220,14 @@ BEGIN
             WHERE trip_id = :NEW.trip_id;
         END IF;
 
-    -- aktualizowanie statsu rezerwacji
+    -- Aktualizowanie statsu rezerwacji
     ELSIF UPDATING THEN
-        -- aktywna -> anulowana
+        -- aktywna -> anulowana +1 miejsce
         IF :OLD.status IN ('N', 'P') AND :NEW.status = 'C' THEN
             UPDATE trip
             SET no_available_places = no_available_places + 1
             WHERE trip_id = :NEW.trip_id;
-        -- anulowana -> aktywna
+        -- anulowana -> aktywna -1 miejsce
         ELSIF :OLD.status = 'C' AND :NEW.status IN ('N', 'P') THEN
             UPDATE trip
             SET no_available_places = no_available_places - 1
@@ -230,7 +236,6 @@ BEGIN
     END IF;
 END;
 
--- p_add_reservation_6b
 CREATE OR REPLACE PROCEDURE p_add_reservation_6b(
     p_trip_id INT,
     p_person_id INT
