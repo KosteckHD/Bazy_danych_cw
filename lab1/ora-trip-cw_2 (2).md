@@ -115,6 +115,7 @@ CREATE OR REPLACE PROCEDURE p_add_reservation_6a(
     p_person_id INT
 ) IS
     v_available INT;
+    v_reservation_id INT; -- dla logów
 BEGIN
     SELECT no_available_places INTO v_available
     FROM trip WHERE trip_id = p_trip_id;
@@ -124,11 +125,11 @@ BEGIN
     END IF;
 
     INSERT INTO RESERVATION (trip_id, person_id, status)
-    VALUES (input_trip_id,input_person_id,'N')
-    RETURNING RESERVATION_ID INTO var_log_reservation_id;
+    VALUES (p_trip_id,p_person_id,'N')
+    RETURNING RESERVATION_ID INTO v_reservation_id;
 
     INSERT INTO LOG (RESERVATION_ID, LOG_DATE, STATUS)
-    VALUES (var_log_reservation_id, SYSDATE, 'N');
+    VALUES (v_reservation_id, SYSDATE, 'N');
 
     -- ustawienie miejsc w trip
     UPDATE trip
@@ -209,7 +210,7 @@ Obsługę pola `no_available_places` należy zrealizować przy pomocy triggerów
 ```sql
 -- Trigger na zmiane statusu w rezerwacjach
 CREATE OR REPLACE TRIGGER trg_manage_places_6b
-AFTER INSERT OR UPDATE OF status ON reservation
+BEFORE INSERT OR UPDATE OF status ON reservation
 FOR EACH ROW
 BEGIN
     -- Dodanie rezerwacji
