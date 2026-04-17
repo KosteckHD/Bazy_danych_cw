@@ -201,16 +201,12 @@ Obsługę pola `no_available_places` należy zrealizować przy pomocy triggerów
 # Zadanie 6b - rozwiązanie
 
 ```sql
-
--- Musimy wyłączyć triggery z zadania 5, aby nie dublować kontroli
-ALTER TRIGGER trg_check_places_compound DISABLE;
-
--- Trigger obsługujący zmiany w rezerwacjach
+-- trigger na zmiane statusu w rezerwacjach
 CREATE OR REPLACE TRIGGER trg_manage_places_6b
 AFTER INSERT OR UPDATE OF status ON reservation
 FOR EACH ROW
 BEGIN
-    -- Przypadek 1: Nowa rezerwacja (zajmuje miejsce)
+    -- dodanie rezerwacji
     IF INSERTING THEN
         IF :NEW.status IN ('N', 'P') THEN
             UPDATE trip
@@ -218,14 +214,14 @@ BEGIN
             WHERE trip_id = :NEW.trip_id;
         END IF;
 
-    -- Przypadek 2: Zmiana statusu
+    -- aktualizowanie statsu rezerwacji
     ELSIF UPDATING THEN
-        -- Zwalnianie miejsca (aktywna -> anulowana)
+        -- aktywna -> anulowana
         IF :OLD.status IN ('N', 'P') AND :NEW.status = 'C' THEN
             UPDATE trip
             SET no_available_places = no_available_places + 1
             WHERE trip_id = :NEW.trip_id;
-        -- Zajmowanie miejsca (anulowana -> aktywna)
+        -- anulowana -> aktywna
         ELSIF :OLD.status = 'C' AND :NEW.status IN ('N', 'P') THEN
             UPDATE trip
             SET no_available_places = no_available_places - 1
@@ -234,18 +230,19 @@ BEGIN
     END IF;
 END;
 
--- Procedura dodająca rezerwację - teraz znacznie prostsza
+-- p_add_reservation_6b
 CREATE OR REPLACE PROCEDURE p_add_reservation_6b(
     p_trip_id INT,
     p_person_id INT
 ) IS
     v_available INT;
 BEGIN
-    -- Sprawdzamy dostępność przed wstawieniem
-    SELECT no_available_places INTO v_available FROM trip WHERE trip_id = p_trip_id;
+    SELECT no_available_places INTO v_available
+    FROM trip WHERE trip_id = p_trip_id;
 
+    -- sprawdzenie są jeszcze miejsca
     IF v_available <= 0 THEN
-        RAISE_APPLICATION_ERROR(-20200, 'Brak miejsc (Trigger 6b).');
+        RAISE_APPLICATION_ERROR(-20070, 'Brak miejsc (Trigger 6b).');
     END IF;
 
     -- Tylko wstawiamy - trigger sam zaktualizuje tabelę TRIP
@@ -254,14 +251,15 @@ BEGIN
 END;
 
 
--- Procedura zmiany statusu
+-- p_modify_reservation_status_6b
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_6b(
     p_reservation_id INT,
     p_status CHAR
 ) IS
 BEGIN
-    -- Procedura nie musi wiedzieć o polu no_available_places
-    UPDATE reservation SET status = p_status WHERE reservation_id = p_reservation_id;
+    UPDATE reservation
+    SET status = p_status
+    WHERE reservation_id = p_reservation_id;
 END;
 
 ```
