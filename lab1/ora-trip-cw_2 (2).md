@@ -245,18 +245,17 @@ BEGIN
     SELECT no_available_places INTO v_available
     FROM trip WHERE trip_id = p_trip_id;
 
-    -- sprawdzenie są jeszcze miejsca
+    -- wyjątek braku miejsc
     IF v_available <= 0 THEN
-        RAISE_APPLICATION_ERROR(-20070, 'Brak miejsc (Trigger 6b).');
+        RAISE_APPLICATION_ERROR(-20070, 'Brak miejsc');
     END IF;
 
-    -- Tylko wstawiamy - trigger sam zaktualizuje tabelę TRIP
+    -- Aktualizacja miejsc w trip sama przez trigger
     INSERT INTO reservation (trip_id, person_id, status)
     VALUES (p_trip_id, p_person_id, 'N');
 END;
 
 
--- p_modify_reservation_status_6b
 CREATE OR REPLACE PROCEDURE p_modify_reservation_status_6b(
     p_reservation_id INT,
     p_status CHAR
