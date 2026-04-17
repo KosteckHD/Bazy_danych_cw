@@ -13,19 +13,19 @@ Michał Kościanek, Michał Mąka
 
 <style>
   code {
-     font-size: 10pt;
+     font-size: 8pt;
   }
 </style>
 
 <style>
   {
-    font-size: 16pt;
+    font-size: 10pt;
   }
 </style>
 
 <style>
  li, p {
-    font-size: 14pt;
+    font-size: 10pt;
   }
 </style>
 
@@ -247,10 +247,10 @@ w szczególności dokumenty: `10_modyf_ora_north.pdf`, `20_ora_plsql_north.pdf`
 
 ```sql
 BEGIN
---     insertujemy do tabeli reservation poprawne wartości istniejących:wycieczki,osoby,statusu
+-- insertujemy do tabeli reservation poprawne wartości istniejących:wycieczki,osoby,statusu
     INSERT INTO reservation(trip_id, person_id, status)
     values (1,5,'P');
--- tutaj działa commit trasnakcja poprawnie działą, zmiany są potwierdzane i wysyłane do bazy danych
+-- tutaj commit poprawnie działa, zmiany są potwierdzane i wysyłane do bazy danych
 COMMIT;
 EXCEPTION
     WHEN OTHERS THEN
@@ -258,7 +258,7 @@ ROLLBACK;
 end;
 
 BEGIN
---     tutaj chcemy dodać do tabeli  reservation  raz nieistniejący trip_id
+-- tutaj chcemy dodać do tabeli  reservation  raz nieistniejący trip_id
 -- a potem trip_id:=null oraz osobe o nieistniejącym person_id
     INSERT INTO reservation(trip_id, person_id, status)
     values (50,2,'P');
@@ -268,7 +268,7 @@ COMMIT;
 -- wyjątek się wykonuje
 EXCEPTION
     WHEN OTHERS THEN
---         zmiany są wycofywane
+-- zmiany są wycofywane
         ROLLBACK;
         RAISE;
 end;
@@ -419,7 +419,8 @@ BEGIN
     -- zwrócenie poprawnego wyniku
     FOR curr IN (SELECT * FROM vw_reservation WHERE trip_id = p_trip_id) LOOP
         PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date,
-                 curr.trip_name, curr.firstname, curr.lastname, curr.status, curr.trip_id, curr.person_id));
+                 curr.trip_name, curr.firstname, curr.lastname,
+                 curr.status, curr.trip_id, curr.person_id));
     END LOOP;
     RETURN;
 END;
@@ -432,12 +433,17 @@ BEGIN
     -- Pominąłem kontrolę parametru dla zwięzłości, ale można ją dodać analogicznie
     FOR curr IN (SELECT * FROM vw_reservation WHERE person_id = p_person_id) LOOP
         PIPE ROW(t_reservation_rec(curr.reservation_id, curr.country, curr.trip_date,
-                 curr.trip_name, curr.firstname, curr.lastname, curr.status, curr.trip_id, curr.person_id));
+                 curr.trip_name, curr.firstname, curr.lastname,
+                 curr.status, curr.trip_id, curr.person_id));
     END LOOP;
     RETURN;
 END;
 
-CREATE OR REPLACE FUNCTION f_available_trips_to(p_country VARCHAR2, p_date_from DATE, p_date_to DATE)
+CREATE OR REPLACE FUNCTION f_available_trips_to(
+    p_country VARCHAR2,
+    p_date_from DATE,
+    p_date_to DATE
+    )
 RETURN t_trip_tab PIPELINED
 IS
 BEGIN

@@ -13,14 +13,20 @@ Imiona i nazwiska autorów : Michał Kościanek, Michał Mąka
 ---
 
 <style>
+  code {
+     font-size: 8pt;
+  }
+</style>
+
+<style>
   {
-    font-size: 16pt;
+    font-size: 10pt;
   }
 </style>
 
 <style scoped>
  li, p {
-    font-size: 14pt;
+    font-size: 10pt;
   }
 </style>
 
