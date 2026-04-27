@@ -6,7 +6,7 @@
 
 ---
 
-**Imiona i nazwiska autorów:**
+Michał Mąka, Michał Kościanek
 
 --- 
 
@@ -540,18 +540,41 @@ db.student.find({"student_id": 1});
 
 
 ```js
-use students;
+// FIND
+db.customers.find({Country:"UK"})
 
-db.students.findOne({"firstName":"Jan"})
+//kolumny w tabeli "rozciągają" się, tworząc wielki zbiór kolumn, a rekordy nie mające tej kolumny maja tam null
+db.customers.find({Region:null})
 
-db.students.find({"firstName":"Jan"})
 
-db.students.insertOne({""firstName":"Jan"","lastName":"Wąś"})
+//INSERT
 
-db.students.updateOne({"firstName":"Jan","lastName":"Wąś"},{"firstName":"Jan","lastName":"Wąs"})
+//można dodać pusty rekord
+db.customers.insertOne({})
+db.customers.insertMany([{},{},{}])
 
-db.students.deleteOne({"lastName":"Wąs"})
+//poprawna wersja użycia insertOne, kolejność atrybutów w dodawaniu nie ma znaczenia
+db.customers.insertOne({Address:"Obere Str. 57",City:"Amsterdam",CompanyName:"NHL",ContactName:"Johan Cruyff",
+Country:"Netherland",CustomerID:"NHL",Phone:"3434-23425",PostalCode:"43-531"})
+    
 
+db.customers.find()
+
+//REPLACE i UPDATE
+
+//przy zamianie rekordów trzeba pamietać, że nie wymieniamy tylko atrybutu, a całą kolekcje,
+//bo możemy dostać rekord z wypełnionym tylko jednym atrybutem
+db.customers.replaceOne({City:"Bern"},{City:"Locarno"})
+
+//chcąc zmienić tylko jeden atrybut w wierszu trzeba zrobić to
+db.customers.updateOne({City:"Madrid"},{$set:{City:"Barcelona"}})
+
+//DELETE
+//usunięcie wszystkich rekordów
+db.customers.deleteMany({})
+
+//poprawne usunięcie rekordu w bazie danych
+db.customers.deleteOne({City:"Locarno"})
 
 
 ```
@@ -1247,7 +1270,54 @@ db.employees.find(
 
 
 ```js
---  ...
+db.employees.aggregate([
+    {
+        $group: {
+            "_id": "$Address.City",
+            "LiczbaPracownikow": { $sum: 1 }
+        }
+    },
+    {
+        $sort: { "LiczbaPracownikow": -1 }
+    }
+])
+
+db.employees.aggregate([
+    {
+        $group: {
+            "_id": "$Address.Country",
+            "Pracownicy": { $push: "$LastName" },
+            "Liczba": { $sum: 1 }
+        }
+    },
+    {
+        $project: {
+            "_id": 0,
+            "Kraj": "$_id",
+            "Pracownicy": 1,
+            "Liczba": 1
+        }
+    }
+])
+
+db.employees.aggregate([
+    {
+        $project: {
+            "_id": 0,
+            "Imie": "$FirstName",
+            "Nazwisko": "$LastName"
+        }
+    },
+    {
+        $sort: { "Nazwisko": 1 }
+    },
+    {
+        $skip: 3
+    },
+    {
+        $limit: 2
+    }
+])
 ```
 
 
@@ -1611,7 +1681,7 @@ show collections;
 ```
 
 
-- zawartość kolekcji  ` em_by_cuuntry_title `
+- zawartość kolekcji  ` em_by_country_title `
 
 ```js
 db.em_by_country_title.find();
