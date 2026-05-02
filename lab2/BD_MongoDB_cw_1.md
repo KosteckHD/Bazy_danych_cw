@@ -1270,7 +1270,78 @@ db.employees.find(
 
 
 ```js
+// bazując na danych z przykładów:
+db.employees.find()
 
+db.employees.find({
+    FirstName: { $regex: /^M/ }
+})
+
+select * from employees where FirstName like 'M%';
+// employees> db.getCollection("employees")
+//    .find({"FirstName": {$regex: /^M/}})
+
+db.employees.find({
+    FirstName: { $regex: /^M/ },    // and
+    LastName: { $regex: /^S/}
+})
+
+db.employees.find({
+    $or: [                          // or
+        { FirstName: { $regex: /^M/ }},
+        {  LastName: { $regex: /^D/}}
+    ]
+})
+
+select * from employees
+where FirstName like 'M%'
+OR LastName LIKE 'D%';
+// employees> db.getCollection("employees").find({$or: 
+//    [{"FirstName": {$regex: /^M/}}, {"LastName": {$regex: /^D/}}]})
+
+
+
+db.employees.find({
+    "Address.City": "Seattle"
+}) // dla zlożonych wyszukań, gdzie występuje '.' klucz musi być objęty ""
+
+select * from employees
+where Address.City is 'Seattle';
+// employees> db.getCollection("employees")
+//    .find({"Address.City": {$eq: 'Seattle'}})
+
+
+// db.collection.find( <query>, <projection>, <options> )
+db.employees.find({},{"_id": 0, "FirstName": 1, "LastName": 1 })
+
+db.employees.find({},{"LastName": 1 })
+// porównując dwie ostatnie operacje, możemy zauważyć, że 
+//    _id, będzie wyświetlane by default, natomiast inne pola są ukryte
+
+
+db.employees.find({
+    Salary: {$lte: 1500}        // porównywanie liczb (lte - lower than or eq), analogicznie gte
+}, {FirstName: 1, LastName: 1, Salary: 1}
+)
+
+
+db.employees.find({
+    $and:
+    [
+        {Salary: {$lte: 1500}},
+        {Salary: {$gte: 1500}}
+        ]
+}, {FirstName: 1, LastName: 1, Salary: 1}
+)
+
+select FirstName, LastName, Salary from employees where Salary >= 1500 and Salary <= 1500;
+// employees> db.getCollection("employees").find({$and:
+//      [{"Salary": {$gte: 1500}}, {"Salary": {$lte: 1500}}]}, 
+//      {"FirstName": 1, "LastName": 1, "Salary": 1, "_id": 0})
+
+// w obydwu przypadkach zgłoszone wykonane polecenie, 
+//      nie sugeruje automatycznych optymalizacji
+//      (check Salary == 1500)
 ```
 
 
