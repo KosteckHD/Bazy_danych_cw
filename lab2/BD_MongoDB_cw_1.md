@@ -1810,7 +1810,8 @@ db.employees.aggregate([
     {
         $limit: 2
     }
-])```
+])
+```
 
 ---
 # Przykład 4
