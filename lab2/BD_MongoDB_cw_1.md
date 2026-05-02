@@ -1270,54 +1270,7 @@ db.employees.find(
 
 
 ```js
-db.employees.aggregate([
-    {
-        $group: {
-            "_id": "$Address.City",
-            "LiczbaPracownikow": { $sum: 1 }
-        }
-    },
-    {
-        $sort: { "LiczbaPracownikow": -1 }
-    }
-])
 
-db.employees.aggregate([
-    {
-        $group: {
-            "_id": "$Address.Country",
-            "Pracownicy": { $push: "$LastName" },
-            "Liczba": { $sum: 1 }
-        }
-    },
-    {
-        $project: {
-            "_id": 0,
-            "Kraj": "$_id",
-            "Pracownicy": 1,
-            "Liczba": 1
-        }
-    }
-])
-
-db.employees.aggregate([
-    {
-        $project: {
-            "_id": 0,
-            "Imie": "$FirstName",
-            "Nazwisko": "$LastName"
-        }
-    },
-    {
-        $sort: { "Nazwisko": 1 }
-    },
-    {
-        $skip: 3
-    },
-    {
-        $limit: 2
-    }
-])
 ```
 
 
@@ -1738,8 +1691,55 @@ db.em_by_country_title.find();
 
 
 ```js
---  ...
-```
+
+db.employees.aggregate([
+    {
+        $group: {
+            "_id": "$Address.City",
+            "LiczbaPracownikow": { $sum: 1 }
+        }
+    },
+    {
+        $sort: { "LiczbaPracownikow": -1 }
+    }
+])
+
+db.employees.aggregate([
+    {
+        $group: {
+            "_id": "$Address.Country",
+            "Pracownicy": { $push: "$LastName" },
+            "Liczba": { $sum: 1 }
+        }
+    },
+    {
+        $project: {
+            "_id": 0,
+            "Kraj": "$_id",
+            "Pracownicy": 1,
+            "Liczba": 1
+        }
+    }
+])
+
+db.employees.aggregate([
+    {
+        $project: {
+            "_id": 0,
+            "Imie": "$FirstName",
+            "Nazwisko": "$LastName"
+        }
+    },
+    {
+        $sort: { "Nazwisko": 1 }
+    },
+    {
+        $skip: 3
+    },
+    {
+        $limit: 2
+    }
+])```
 
 ---
 # Przykład 4
