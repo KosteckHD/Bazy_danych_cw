@@ -2881,6 +2881,164 @@ TotalOrderValue : ...
 
 
 ```js
---  ...
+db.orders_tmp.aggregate([
+    {
+        // uporządkowanie
+        $project: {
+            OrderID: 1,
+            CustomerID: 1,
+            EmployeeID: 1,
+//            OrderDate: 1,
+//            RequiredDate: 1,
+//            ShippedDate: 1,
+            // powtorzone w dates
+            ShipVia: 1,
+            Freight: 1,
+
+            Shippment: {
+                ShipAddress: "$ShipAddress",
+                ShipCity: "$ShipCity",
+                ShipCountry: "$ShipCountry",
+                ShipName: "$ShipName",
+                ShipPostalCode: "$ShipPostalCode",
+                ShipRegion: "$ShipRegion"
+            },
+
+            Dates: {
+                OrderDate: "$OrderDate",
+                RequiredDate: "$RequiredDate",
+                ShippedDate: "$ShippedDate",
+            },
+        },
+    },
+    // aby znaleźć TotalOrderValue musimy znaleźć cene danych produktów
+    {
+        $lookup: {
+            // w orderdetails_tmp mamy juz zsumowane totalValue dla pojedyńczych produktów w zamówieniu
+            from: "orderdetails_tmp",
+            localField: "OrderID",
+            foreignField: "OrderID",
+            as: "OrderItems"
+        }
+    },
+    {
+        $addFields: {
+            TotalOrderValue: { $sum: "$OrderItems.TotalValue" }
+        }
+    },
+    // dodatkowo możemy schować zamówienia na pojedyńcze produkty
+    {
+        $project: {
+            OrderItems: 0
+        }
+    },
+
+    { $out: "orders_tmp2" }
+])
+
+db.orderdetails_tmp.find()
+db.orders_tmp2.find().limit(1)
 ```
 
+- Wyniki
+
+```js
+// bez zschowanych produktów, 
+//    żeby sprawdzić sumowanie (OrderItems: 1) 
+
+[
+  {
+    "_id": {"$oid": "63a060b9bb3b972d6f4e1fc6"},
+    "Dates": {
+      "OrderDate": {"$date": "1996-07-04T00:00:00.000Z"},
+      "RequiredDate": {"$date": "1996-08-01T00:00:00.000Z"},
+      "ShippedDate": {"$date": "1996-07-16T00:00:00.000Z"}
+    },
+    "Freight": 32.38,
+    "OrderID": 10248,
+    "OrderItems": [
+      {
+        "_id": {"$oid": "63a06016bb3b972d6f4e16bc"},
+        "OrderID": 10248,
+        "UnitPrice": 14,
+        "Quantity": 12,
+        "Discount": 0,
+        "product": {
+          "ProductID": 11,
+          "ProductName": "Queso Cabrales",
+          "SupplierID": 5,
+          "CategoryID": 4,
+          "CategoryName": "Dairy Products",
+          "SupplierName": "Cooperativa de Quesos 'Las Cabras'"
+        },
+        "TotalValue": 168
+      },
+      {
+        "_id": {"$oid": "63a06016bb3b972d6f4e16bd"},
+        "OrderID": 10248,
+        "UnitPrice": 9.8,
+        "Quantity": 10,
+        "Discount": 0,
+        "product": {
+          "ProductID": 42,
+          "ProductName": "Singaporean Hokkien Fried Mee",
+          "SupplierID": 20,
+          "CategoryID": 5,
+          "CategoryName": "Grains/Cereals",
+          "SupplierName": "Leka Trading"
+        },
+        "TotalValue": 98
+      },
+      {
+        "_id": {"$oid": "63a06016bb3b972d6f4e16be"},
+        "OrderID": 10248,
+        "UnitPrice": 34.8,
+        "Quantity": 5,
+        "Discount": 0,
+        "product": {
+          "ProductID": 72,
+          "ProductName": "Mozzarella di Giovanni",
+          "SupplierID": 14,
+          "CategoryID": 4,
+          "CategoryName": "Dairy Products",
+          "SupplierName": "Formaggi Fortini s.r.l."
+        },
+        "TotalValue": 174
+      }
+    ],
+    "Shippment": {
+      "ShipAddress": "59 rue de l'Abbaye",
+      "ShipCity": "Reims",
+      "ShipCountry": "France",
+      "ShipName": "Vins et alcools Chevalier",
+      "ShipPostalCode": "51100",
+      "ShipRegion": null
+    },
+    "TotalOrderValue": 440
+  }
+]
+
+// OrderItems: 0
+
+[
+  {
+    "_id": {"$oid": "63a060b9bb3b972d6f4e1fc6"},
+    "Dates": {
+      "OrderDate": {"$date": "1996-07-04T00:00:00.000Z"},
+      "RequiredDate": {"$date": "1996-08-01T00:00:00.000Z"},
+      "ShippedDate": {"$date": "1996-07-16T00:00:00.000Z"}
+    },
+    "Freight": 32.38,
+    "OrderID": 10248,
+    "Shippment": {
+      "ShipAddress": "59 rue de l'Abbaye",
+      "ShipCity": "Reims",
+      "ShipCountry": "France",
+      "ShipName": "Vins et alcools Chevalier",
+      "ShipPostalCode": "51100",
+      "ShipRegion": null
+    },
+    "TotalOrderValue": 440
+  }
+]
+```
