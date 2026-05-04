@@ -46,6 +46,141 @@ db.orderdetails.find();
 stwórz kolekcję  `OrdersInfo`  zawierającą następujące dane o zamówieniach
 - kolekcję  `OrdersInfo` należy stworzyć przekształcając dokumenty w oryginalnych kolekcjach `customers, orders, orderdetails, employees, shippers, products, categories, suppliers` do kolekcji  w której pojedynczy dokument opisuje jedno zamówienie
 
+```js
+db.orders.aggregate([{
+    $lookup:{from:"customers",
+        localField:"CustomerID",
+        foreignField:"CustomerID",
+        as:"Customer"}
+    },
+    {
+        $lookup:{from:"employees",
+            localField:"EmpolyeeID",
+            foreignField:"EmpolyeeID",
+            as:"Employee"}
+        },
+    {
+        $lookup:{from:"orderdetails",
+            localField:"OrderID",
+            foreignField:"OrderID",
+            as:"Orderdetails"}
+        },
+    {
+        $lookup:{from:"shippers",
+            localField:"ShipperID",
+            foreignField:"ShipperID",
+            as:"shipper"}
+        },
+    {
+        $lookup:{from:"products",
+            localField:"orderdetail.ProductID",
+            foreignField:"ProductID",
+            as:"product"}
+        },
+    {
+        $lookup:{from:"categories",
+            localField:"CategoryID",
+            foreignField:"CategoryID",
+            as:"category"}
+        },
+    {$unwind:"$customer"},
+    {$unwind:"$employee"},
+
+    {$limit:1},
+    {
+        $project: {
+            _id: 1,
+            OrderID: 1,
+
+
+            "Customer": {
+                "CustomerID": "$Customer.CustomerID",
+                "CompanyName": "$Customer.CompanyName",
+                "City": "$Customer.City",
+                "Country": "$Customer.Country"
+                },
+
+
+            "Employee": {
+                "EmployeeID": "$Employee.EmployeeID",
+                "FirstName": "$Employee.FirstName",
+                "LastName": "$Employee.LastName",
+                "Title": "$Employee.Title"
+                },
+
+
+            "Dates": {
+                "OrderDate": "$OrderDate",
+                "RequiredDate": "$RequiredDate"
+                },
+
+
+            "Orderdetails": {
+                $map: {
+                    input: "$Orderdetails",
+                    as: "od",
+                    in: {
+                        "UnitPrice": "$$od.UnitPrice",
+                        "Quantity": "$$od.Quantity",
+                        "Discount": "$$od.Discount",
+                        "Value": {
+                            $multiply: [
+                                "$$od.UnitPrice",
+                                "$$od.Quantity",
+                                { $subtract: [1, { $ifNull: ["$$od.Discount", 0] }] }
+                                ]
+                            },
+                        "product": {
+                            $arrayElemAt: [
+                                {
+                                    $filter: {
+                                        input: "$product",
+                                        as: "p",
+                                        cond: { $eq: ["$$p.ProductID", "$$od.ProductID"] }
+                                        }
+                                    },
+                                0
+                                ]
+                            }
+                        }
+                    }
+                },
+
+            "Freight": 1,
+
+            "OrderTotal": {
+                $sum: {
+                    $map: {
+                        input: "$Orderdetails",
+                        as: "od",
+                        in: {
+                            $multiply: [
+                                "$$od.UnitPrice",
+                                "$$od.Quantity",
+                                { $subtract: [1, { $ifNull: ["$$od.Discount", 0] }] }
+                                ]
+                            }
+                        }
+                    }
+                },
+
+            "Shipment": 
+                {
+                "Shipper": {
+                    "ShipperID": { "$shipper.ShipperID"},
+                    "CompanyName": "$shipper.CompanyName" }
+                    },
+                "ShipName": "$ShipName",
+                "ShipAddress": "$ShipAddress",
+                "ShipCity": "$ShipCity",
+                "ShipCountry": "$ShipCountry"
+                }
+            }
+        }
+
+    ])
+```
+
 spodziewany wynik:
 
 ```js
