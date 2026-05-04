@@ -272,6 +272,28 @@ spodziewany wynik:
 ]  
 ```
 
+rozwiazanie (czesciowe):
+```js
+
+db.customers.aggregate([
+    {
+        $project:{
+            _id: 1,
+            CustomerId: 1,
+            CompanyName: 1,
+            City: 1,
+            Country: 1,
+
+//            Orders: {
+//
+//                }
+
+            },
+        },
+    { $out: "CustomerInfo" }
+])
+```
+
 # c) 
 
 Napisz polecenie/zapytanie: Dla każdego klienta pokaż wartość zakupionych przez niego produktów z kategorii 'Confections'  w 1997r
@@ -294,6 +316,63 @@ Napisz polecenie/zapytanie: Dla każdego klienta pokaż wartość zakupionych pr
 
   }		  
 ]  
+```
+
+rozwiazanie (czesciowe):
+```js
+db.customers.aggregate([
+    {
+        $lookup: {
+            from: "orders",
+            localField: "CustomerID",
+            foreignField: "CustomerID",
+            as: "Order"
+        },
+    },
+        {$unwind: "$Order"},
+    {
+        $lookup: {
+            from: "orderdetails",
+            localField: "Order.OrderID",
+            foreignField: "OrderID",
+            as: "OrderDetail"
+            }
+    },
+            {$unwind: "$OrderDetail"},
+    {
+        $lookup: {
+            from: "products",
+            localField: "OrderDetail.ProductID",
+            foreignField: "ProductID",
+            as: "ProductInfo"
+            }
+    },
+            {$unwind: "$ProductInfo"},
+    {
+        $lookup: {
+            from: "categories",
+            localField: "ProductInfo.CategoryID",
+            foreignField: "CategoryID",
+            as: "Category"
+            }
+    },
+    {$unwind: "$Category"},
+    {
+        $match: {"Category.CategoryName": "Confections"}
+    },
+    {
+        $match:
+        {
+            $expr: {
+                $eq: [{ $year: {$toDate: "$OrderDate"} }, 1997]
+                }
+            }
+        },
+    {$limit: 1}
+
+
+])
+
 ```
 
 # d)
