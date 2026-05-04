@@ -532,7 +532,7 @@ db.student.find({"student_id": 1});
 	- [https://www.mongodb.com/docs/manual/reference/method/db.collection.updateOne/](https://www.mongodb.com/docs/manual/reference/method/db.collection.updateOne/)
 	- [https://www.mongodb.com/docs/manual/reference/method/db.collection.deleteOne/](https://www.mongodb.com/docs/manual/reference/method/db.collection.deleteOne/)
 
-## Zadanie 1  - rozwiązanie
+## Zadanie 1  - rozwiązanie - Michał Kościanek, code review - Michał Mąka
 
 > Wyniki: 
 > 
@@ -543,7 +543,8 @@ db.student.find({"student_id": 1});
 // FIND
 db.customers.find({Country:"UK"})
 
-//kolumny w tabeli "rozciągają" się, tworząc wielki zbiór kolumn, a rekordy nie mające tej kolumny maja tam null
+//kolumny w tabeli "rozciągają" się, tworząc wielki zbiór kolumn, a rekordy 
+// nie mające tej kolumny maja tam null
 db.customers.find({Region:null})
 
 
@@ -553,17 +554,25 @@ db.customers.find({Region:null})
 db.customers.insertOne({})
 db.customers.insertMany([{},{},{}])
 
-//poprawna wersja użycia insertOne, kolejność atrybutów w dodawaniu nie ma znaczenia
-db.customers.insertOne({Address:"Obere Str. 57",City:"Amsterdam",CompanyName:"NHL",ContactName:"Johan Cruyff",
-Country:"Netherland",CustomerID:"NHL",Phone:"3434-23425",PostalCode:"43-531"})
+//poprawna wersja użycia insertOne, kolejność atrybutów w dodawaniu 
+// nie ma znaczenia
+db.customers.insertOne({
+  Address:"Obere Str. 57",
+  City:"Amsterdam",
+  CompanyName:"NHL",
+  ContactName:"Johan Cruyff",
+  Country:"Netherland",
+  CustomerID:"NHL",
+  Phone:"3434-23425",
+  PostalCode:"43-531"})
     
 
 db.customers.find()
 
 //REPLACE i UPDATE
 
-//przy zamianie rekordów trzeba pamietać, że nie wymieniamy tylko atrybutu, a całą kolekcje,
-//bo możemy dostać rekord z wypełnionym tylko jednym atrybutem
+//przy zamianie rekordów trzeba pamietać, że nie wymieniamy tylko atrybutu, 
+// a całą kolekcje,bo możemy dostać rekord z wypełnionym tylko jednym atrybutem
 db.customers.replaceOne({City:"Bern"},{City:"Locarno"})
 
 //chcąc zmienić tylko jeden atrybut w wierszu trzeba zrobić to
@@ -1262,7 +1271,7 @@ db.employees.find(
 
 - Wykonaj kilka własnych eksperymentów 
 
-## Zadanie 2  - rozwiązanie
+## Zadanie 2 - rozwiązanie - Michał Mąka, code review - Michał  Kościanek
 
 > Wyniki: 
 > 
@@ -1303,7 +1312,8 @@ OR LastName LIKE 'D%';
 
 db.employees.find({
     "Address.City": "Seattle"
-}) // dla zlożonych wyszukań, gdzie występuje '.' klucz musi być objęty ""
+}) 
+// dla zlożonych wyszukań, gdzie występuje '.' klucz musi być objęty ""
 
 select * from employees
 where Address.City is 'Seattle';
@@ -1320,7 +1330,8 @@ db.employees.find({},{"LastName": 1 })
 
 
 db.employees.find({
-    Salary: {$lte: 1500}        // porównywanie liczb (lte - lower than or eq), analogicznie gte
+  // porównywanie liczb (lte - lower than or eq), analogicznie gte
+    Salary: {$lte: 1500}        
 }, {FirstName: 1, LastName: 1, Salary: 1}
 )
 
@@ -1334,7 +1345,8 @@ db.employees.find({
 }, {FirstName: 1, LastName: 1, Salary: 1}
 )
 
-select FirstName, LastName, Salary from employees where Salary >= 1500 and Salary <= 1500;
+select FirstName, LastName, Salary 
+from employees where Salary >= 1500 and Salary <= 1500;
 // employees> db.getCollection("employees").find({$and:
 //      [{"Salary": {$gte: 1500}}, {"Salary": {$lte: 1500}}]}, 
 //      {"FirstName": 1, "LastName": 1, "Salary": 1, "_id": 0})
@@ -1754,7 +1766,7 @@ db.em_by_country_title.find();
 - Wykonaj kilka własnych eksperymentów 
 
 
-## Zadanie 3  - rozwiązanie
+## Zadanie 3  - rozwiązanie - Michał Kościanek, code review - Michał Mąka
 
 > Wyniki: 
 > 
@@ -1762,28 +1774,37 @@ db.em_by_country_title.find();
 
 
 ```js
-
+//wynik to posortowana malejąco liczba pracowników z każdego miasta
 db.employees.aggregate([
     {
+      //group by jak z T-SQL,
+      // 
         $group: {
-            "_id": "$Address.City",
+            "_id": "$City",
+            // do każdego zgrupowanego dokumentu dodaj 1
             "LiczbaPracownikow": { $sum: 1 }
         }
     },
     {
+      //sortowanie DESC
         $sort: { "LiczbaPracownikow": -1 }
     }
 ])
-
+//wynik to reprezentacja ilu pracowników i jacy pracownicy pracują
+// z danego państwa 
 db.employees.aggregate([
     {
+      //grupujemy po krajach
         $group: {
-            "_id": "$Address.Country",
+            "_id": "$Country",
+            //dodajemy do wyniku tabele pasujących pracowników
             "Pracownicy": { $push: "$LastName" },
+            //podliczamy każdego dodanego 
             "Liczba": { $sum: 1 }
         }
     },
     {
+      //zaprojektowane wyświetlanie się wyników
         $project: {
             "_id": 0,
             "Kraj": "$_id",
@@ -1792,7 +1813,8 @@ db.employees.aggregate([
         }
     }
 ])
-
+// wynik to 2 pierwszych wg. alfabetu po nazwisku pracownicy
+// pomijając 3 pierwsze wyniki
 db.employees.aggregate([
     {
         $project: {
@@ -2873,7 +2895,7 @@ Dates : {
 TotalOrderValue : ...
 ```
 
-## Zadanie 4  - rozwiązanie
+## Zadanie 4  - rozwiązanie - Michał Mąka, code review - Michał  Kościanek
 
 > Wyniki: 
 > 
@@ -2914,7 +2936,8 @@ db.orders_tmp.aggregate([
     // aby znaleźć TotalOrderValue musimy znaleźć cene danych produktów
     {
         $lookup: {
-            // w orderdetails_tmp mamy juz zsumowane totalValue dla pojedyńczych produktów w zamówieniu
+            // w orderdetails_tmp mamy juz zsumowane totalValue
+            //  dla pojedyńczych produktów w zamówieniu
             from: "orderdetails_tmp",
             localField: "OrderID",
             foreignField: "OrderID",
