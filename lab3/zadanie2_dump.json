@@ -1,0 +1,299 @@
+{
+  "metadata": {
+    "database": "Excursions Management Database",
+    "variant": "Hybrydowy (Mixed)",
+    "exportDate": "2026-05-14",
+    "description": "Baza danych systemu zarządzania wycieczkami - Zadanie 2"
+  },
+  "collections": {
+    "companies": [
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439011')",
+        "companyID": "COMP001",
+        "name": "AwesomeTrips",
+        "email": "info@awesometrips.com",
+        "phone": "+48123456789",
+        "address": "ul. Podróżna 10, Warszawa",
+        "website": "www.awesometrips.com",
+        "foundedYear": 2015,
+        "rating": 4.5,
+        "totalReviews": 150
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439012')",
+        "companyID": "COMP002",
+        "name": "EuroAdventures",
+        "email": "hello@euroadventures.com",
+        "phone": "+33123456789",
+        "address": "10 Rue de Paris, Lyon",
+        "website": "www.euroadventures.com",
+        "foundedYear": 2010,
+        "rating": 4.3,
+        "totalReviews": 200
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439013')",
+        "companyID": "COMP003",
+        "name": "PolarExpeditions",
+        "email": "contact@polarexp.com",
+        "phone": "+47987654321",
+        "address": "Arctic House, Tromsø",
+        "website": "www.polarexp.com",
+        "foundedYear": 2018,
+        "rating": 4.7,
+        "totalReviews": 80
+      }
+    ],
+    "persons": [
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439021')",
+        "personID": "PER001",
+        "firstName": "Jan",
+        "lastName": "Kowalski",
+        "email": "jan.kowalski@email.com",
+        "phone": "+48987654321",
+        "birthDate": "ISODate('1985-03-15')",
+        "nationality": "Polish",
+        "registrationDate": "ISODate('2024-01-10')"
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439022')",
+        "personID": "PER002",
+        "firstName": "Maria",
+        "lastName": "Nowak",
+        "email": "maria.nowak@email.com",
+        "phone": "+48987654322",
+        "birthDate": "ISODate('1990-07-22')",
+        "nationality": "Polish",
+        "registrationDate": "ISODate('2024-02-15')"
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439023')",
+        "personID": "PER003",
+        "firstName": "Pierre",
+        "lastName": "Dubois",
+        "email": "pierre.dubois@email.fr",
+        "phone": "+33612345678",
+        "birthDate": "ISODate('1988-11-05')",
+        "nationality": "French",
+        "registrationDate": "ISODate('2024-03-20')"
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439024')",
+        "personID": "PER004",
+        "firstName": "Anna",
+        "lastName": "Schmidt",
+        "email": "anna.schmidt@email.de",
+        "phone": "+49301234567",
+        "birthDate": "ISODate('1992-05-30')",
+        "nationality": "German",
+        "registrationDate": "ISODate('2024-04-01')"
+      }
+    ],
+    "excursions_hybrid": [
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439031')",
+        "excursionID": "EXC001",
+        "title": "Rejs po Dunaju",
+        "description": "8-dniowa wycieczka po Dunaju z wizytą w Wiedniu, Bratysławie i Budapeszcie",
+        "destination": "Austria, Słowacja, Węgry",
+        "startDate": "ISODate('2026-06-15')",
+        "endDate": "ISODate('2026-06-22')",
+        "duration": 8,
+        "pricePerPerson": 2500,
+        "availableSeats": 42,
+        "totalSeats": 50,
+        "companyID": "COMP001",
+        "companyName": "AwesomeTrips",
+        "companyRating": 4.5,
+        "category": "River Cruise",
+        "difficulty": "Easy",
+        "highlights": ["Dunaj", "Wiedeń", "Bratysława", "Budapeszt"],
+        "accommodationType": "4-star hotel",
+        "mealsPlan": "Half Board",
+        "reservations": [
+          {
+            "reservationID": "RES001",
+            "personID": "PER001",
+            "personName": "Jan Kowalski",
+            "numberOfSeats": 2,
+            "totalPrice": 5000,
+            "reservationDate": "ISODate('2026-05-01')",
+            "status": "Confirmed",
+            "paymentStatus": "Paid",
+            "paymentDate": "ISODate('2026-05-05')"
+          },
+          {
+            "reservationID": "RES002",
+            "personID": "PER002",
+            "personName": "Maria Nowak",
+            "numberOfSeats": 1,
+            "totalPrice": 2500,
+            "reservationDate": "ISODate('2026-05-03')",
+            "status": "Confirmed",
+            "paymentStatus": "Paid",
+            "paymentDate": "ISODate('2026-05-08')"
+          }
+        ],
+        "reviews": [
+          {
+            "reviewID": "REV001",
+            "personID": "PER001",
+            "personName": "Jan Kowalski",
+            "rating": 5,
+            "comment": "Wspaniała wycieczka! Rewelacyjna organizacja i piękne widoki. Gorąco polecam!",
+            "reviewDate": "ISODate('2026-06-25')"
+          },
+          {
+            "reviewID": "REV002",
+            "personID": "PER002",
+            "personName": "Maria Nowak",
+            "rating": 4,
+            "comment": "Bardzo dobra wycieczka, jedynym minusem było pogorszenie pogody.",
+            "reviewDate": "ISODate('2026-06-26')"
+          }
+        ],
+        "averageRating": 4.5,
+        "totalReviews": 2,
+        "createdDate": "ISODate('2026-01-10')"
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439032')",
+        "excursionID": "EXC002",
+        "title": "Eksploracja Grenlandii",
+        "description": "10-dniowa arktyczna eksploracja Grenlandii z obserwacją lodowców i aurory",
+        "destination": "Grenlandia",
+        "startDate": "ISODate('2026-08-20')",
+        "endDate": "ISODate('2026-08-30')",
+        "duration": 10,
+        "pricePerPerson": 5500,
+        "availableSeats": 18,
+        "totalSeats": 20,
+        "companyID": "COMP003",
+        "companyName": "PolarExpeditions",
+        "companyRating": 4.7,
+        "category": "Adventure",
+        "difficulty": "Hard",
+        "highlights": ["Lodowce", "Aurora Borealis", "Inuici", "Nuuk"],
+        "accommodationType": "Luxury lodge",
+        "mealsPlan": "Full Board",
+        "reservations": [
+          {
+            "reservationID": "RES003",
+            "personID": "PER003",
+            "personName": "Pierre Dubois",
+            "numberOfSeats": 1,
+            "totalPrice": 5500,
+            "reservationDate": "ISODate('2026-05-10')",
+            "status": "Confirmed",
+            "paymentStatus": "Paid",
+            "paymentDate": "ISODate('2026-05-15')"
+          }
+        ],
+        "reviews": [
+          {
+            "reviewID": "REV003",
+            "personID": "PER003",
+            "personName": "Pierre Dubois",
+            "rating": 5,
+            "comment": "Niesamowite doświadczenie! Polecam każdemu miłośnikowi przyrody!",
+            "reviewDate": "ISODate('2026-08-31')"
+          }
+        ],
+        "averageRating": 5.0,
+        "totalReviews": 1,
+        "createdDate": "ISODate('2026-02-01')"
+      },
+      {
+        "_id": "ObjectId('507f1f77bcf86cd799439033')",
+        "excursionID": "EXC003",
+        "title": "Paryż - Miasto Światła",
+        "description": "5-dniowa wycieczka po Paryżu z wizytą w Luwrze, Notre-Dame i Wieży Eiffla",
+        "destination": "Francja",
+        "startDate": "ISODate('2026-07-10')",
+        "endDate": "ISODate('2026-07-14')",
+        "duration": 5,
+        "pricePerPerson": 1800,
+        "availableSeats": 35,
+        "totalSeats": 40,
+        "companyID": "COMP002",
+        "companyName": "EuroAdventures",
+        "companyRating": 4.3,
+        "category": "Cultural",
+        "difficulty": "Easy",
+        "highlights": ["Wieża Eiffla", "Luwr", "Notre-Dame", "Pałac Wersalski"],
+        "accommodationType": "3-star hotel",
+        "mealsPlan": "Breakfast",
+        "reservations": [
+          {
+            "reservationID": "RES004",
+            "personID": "PER004",
+            "personName": "Anna Schmidt",
+            "numberOfSeats": 2,
+            "totalPrice": 3600,
+            "reservationDate": "ISODate('2026-05-20')",
+            "status": "Confirmed",
+            "paymentStatus": "Pending"
+          }
+        ],
+        "reviews": [
+          {
+            "reviewID": "REV004",
+            "personID": "PER001",
+            "personName": "Jan Kowalski",
+            "rating": 4,
+            "comment": "Bardzo ładna wycieczka, choć trochę zbyt pospieszona.",
+            "reviewDate": "ISODate('2026-07-15')"
+          }
+        ],
+        "averageRating": 4.0,
+        "totalReviews": 1,
+        "createdDate": "ISODate('2026-01-20')"
+      }
+    ]
+  },
+  "validation_rules": {
+    "companies": {
+      "required_fields": ["companyID", "name", "email", "phone"],
+      "unique_fields": ["companyID"],
+      "constraints": {
+        "rating": "0-5",
+        "foundedYear": ">= 1900"
+      }
+    },
+    "persons": {
+      "required_fields": ["personID", "firstName", "lastName", "email"],
+      "unique_fields": ["personID", "email"],
+      "constraints": {
+        "birthDate": "musi być w przeszłości"
+      }
+    },
+    "excursions_hybrid": {
+      "required_fields": ["excursionID", "title", "destination", "pricePerPerson"],
+      "unique_fields": ["excursionID"],
+      "constraints": {
+        "availableSeats": "<= totalSeats",
+        "averageRating": "0-5",
+        "startDate": "< endDate"
+      }
+    }
+  },
+  "indexes_recommended": [
+    {
+      "collection": "companies",
+      "fields": { "companyID": 1 }
+    },
+    {
+      "collection": "persons",
+      "fields": { "personID": 1, "email": 1 }
+    },
+    {
+      "collection": "excursions_hybrid",
+      "fields": { "excursionID": 1, "companyID": 1, "category": 1 }
+    },
+    {
+      "collection": "excursions_hybrid",
+      "fields": { "startDate": 1, "endDate": 1 }
+    }
+  ]
+}

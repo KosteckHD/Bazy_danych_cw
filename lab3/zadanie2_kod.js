@@ -1,11 +1,7 @@
-// ============================================================================
 // ZADANIE 2 - System zarządzania wycieczkami (Firmy, wycieczki, osoby)
 // Wariant 3: Struktura hybrydowa (dokumenty zagnieżdżone + referencje)
-// ============================================================================
 
-// ============================================================================
 // CZĘŚĆ 1: INICJALIZACJA I POPULACJA DANYCH
-// ============================================================================
 
 // Wyczyszczenie istniejących danych
 db.companies.deleteMany({});
@@ -259,9 +255,7 @@ db.excursions_hybrid.insertMany([
 
 print("✓ Dodano 3 wycieczki z rezerwacjami i recenzjami");
 
-// ============================================================================
 // CZĘŚĆ 2: ZAPYTANIA I OPERACJE
-// ============================================================================
 
 print("\n========== ZAPYTANIE 1: Wycieczki z dostępnością > 30 miejsc ==========\n");
 db.excursions_hybrid.find(
@@ -413,7 +407,7 @@ db.excursions_hybrid.updateOne(
         personID: "PER002",
         personName: "Maria Nowak",
         numberOfSeats: 1,
-        totalPrice": 5500,
+        totalPrice: 5500,
         reservationDate: ISODate("2026-05-25"),
         status: "Confirmed",
         paymentStatus: "Paid",

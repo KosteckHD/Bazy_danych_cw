@@ -499,7 +499,7 @@ Do sprawozdania należy dołączyć
 
 ### Wybrane zagadnienie: B - Firmy, wycieczki, osoby
 
-Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzie osoby rezerwują miejsca, kupują bilety i oceniają wycieczki.
+
 
 ---
 
@@ -510,7 +510,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
 **Struktury dokumentów:**
 
 ```json
-// Kolekcja: companies (Firmy)
+// Kolekcja: companies 
 {
   "_id": ObjectId("..."),
   "companyID": "COMP001",
@@ -523,7 +523,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
   "rating": 4.5
 }
 
-// Kolekcja: excursions (Wycieczki)
+// Kolekcja: excursions 
 {
   "_id": ObjectId("..."),
   "excursionID": "EXC001",
@@ -542,7 +542,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
   "highlights": ["Dunaj", "Wiedeń", "Bratysława"]
 }
 
-// Kolekcja: persons (Osoby)
+// Kolekcja: persons 
 {
   "_id": ObjectId("..."),
   "personID": "PER001",
@@ -555,7 +555,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
   "registrationDate": ISODate("2024-01-10")
 }
 
-// Kolekcja: reservations (Rezerwacje)
+// Kolekcja: reservations
 {
   "_id": ObjectId("..."),
   "reservationID": "RES001",
@@ -569,7 +569,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
   "paymentDate": ISODate("2026-05-05")
 }
 
-// Kolekcja: reviews (Oceny)
+// Kolekcja: reviews 
 {
   "_id": ObjectId("..."),
   "reviewID": "REV001",
@@ -583,15 +583,15 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
 ```
 
 **Zalety:**
-- ✅ Brak redundancji danych
-- ✅ Łatwe aktualizacje (np. zmiana danych firmy w jednym miejscu)
-- ✅ Zgodne z normalizacją relacyjną
-- ✅ Oszczędność pamięci
+-  Brak redundancji danych
+-  Łatwe aktualizacje (np. zmiana danych firmy w jednym miejscu)
+-  Zgodne z normalizacją relacyjną
+-  Oszczędność pamięci
 
 **Wady:**
-- ❌ Wiele operacji lookup() wymaganych dla złożonych zapytań
-- ❌ Gorsza wydajność przy czytaniu
-- ❌ Konieczność łączenia danych z wielu kolekcji
+-  Wiele operacji lookup() wymaganych dla złożonych zapytań
+-  Gorsza wydajność przy czytaniu
+-  Konieczność łączenia danych z wielu kolekcji
 
 ---
 
@@ -656,25 +656,25 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
 ```
 
 **Zalety:**
-- ✅ Bardzo szybkie odczyty (jedno zapytanie)
-- ✅ Kompletne dane w jednym dokumencie
-- ✅ Łatwiejsze operacje agregacji
-- ✅ Lepsza wydajność dla scenariuszy read-heavy
+-  Bardzo szybkie odczyty (jedno zapytanie)
+-  Kompletne dane w jednym dokumencie
+-  Łatwiejsze operacje agregacji
+-  Lepsza wydajność dla scenariuszy read-heavy
 
 **Wady:**
-- ❌ Duża redundancja danych
-- ❌ Trudne aktualizacje (trzeba aktualizować w wielu miejscach)
-- ❌ Rozmiar dokumentu może się szybko powiększać
-- ❌ Trudności przy modyfikacji danych osób lub firm
+-  Duża redundancja danych
+-  Trudne aktualizacje (trzeba aktualizować w wielu miejscach)
+-  Rozmiar dokumentu może się szybko powiększać
+-  Trudności przy modyfikacji danych osób lub firm
 
 ---
 
-#### **WARIANT 3: Struktura hybrydowa (mixed approach)**
+#### **WARIANT 3: Struktura hybrydowa **
 
 **Struktury dokumentów:**
 
 ```json
-// Kolekcja: companies (Firmy - normalizowane)
+// Kolekcja: companies 
 {
   "_id": ObjectId("..."),
   "companyID": "COMP001",
@@ -686,7 +686,7 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
   "rating": 4.5
 }
 
-// Kolekcja: persons (Osoby - normalizowane)
+// Kolekcja: persons 
 {
   "_id": ObjectId("..."),
   "personID": "PER001",
@@ -754,15 +754,6 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
 
 ---
 
-### **Rekomendacja: Wybrany Wariant 3 (Hybrydowy)**
-
-Dla tego scenariusza wybieram **WARIANT 3** ponieważ:
-- Wycieczki są najczęściej czytane z recenzjami → zagnieżdżenie recenzji
-- Dane osób mogą się zmieniać → oddzielna kolekcja
-- Dane firm są względnie statyczne → можно zduplikować
-- Rezerwacje związane są z wycieczkami → zagnieżdżone w wycieczce
-
----
 
 ### b) Populacja kolekcji przykładowymi danymi
 
