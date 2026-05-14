@@ -1,6 +1,6 @@
 // ZADANIE 2 - System zarządzania wycieczkami (Firmy, wycieczki, osoby)
 // Wariant 3: Struktura hybrydowa (dokumenty zagnieżdżone + referencje)
-
+use zad2b
 // CZĘŚĆ 1: INICJALIZACJA I POPULACJA DANYCH
 
 // Wyczyszczenie istniejących danych
@@ -45,7 +45,6 @@ db.companies.insertMany([
   }
 ]);
 
-print("✓ Dodano 3 firmy");
 
 // 2. DODANIE OSÓB
 db.persons.insertMany([
@@ -91,7 +90,6 @@ db.persons.insertMany([
   }
 ]);
 
-print("✓ Dodano 4 osoby");
 
 // 3. DODANIE WYCIECZEK Z REZERWACJAMI I RECENZJAMI
 db.excursions_hybrid.insertMany([
@@ -253,17 +251,14 @@ db.excursions_hybrid.insertMany([
   }
 ]);
 
-print("✓ Dodano 3 wycieczki z rezerwacjami i recenzjami");
 
 // CZĘŚĆ 2: ZAPYTANIA I OPERACJE
 
-print("\n========== ZAPYTANIE 1: Wycieczki z dostępnością > 30 miejsc ==========\n");
 db.excursions_hybrid.find(
   { availableSeats: { $gt: 30 } },
   { title: 1, destination: 1, availableSeats: 1, pricePerPerson: 1, _id: 0 }
 ).pretty();
 
-print("\n========== ZAPYTANIE 2: Przychód z każdej wycieczki ==========\n");
 db.excursions_hybrid.aggregate([
   {
     $project: {
@@ -299,7 +294,6 @@ db.excursions_hybrid.aggregate([
   }
 ]).pretty();
 
-print("\n========== ZAPYTANIE 3: Wycieczki z oceną >= 4.0 gwiazdek ==========\n");
 db.excursions_hybrid.find(
   { averageRating: { $gte: 4.0 } },
   { 
@@ -311,7 +305,6 @@ db.excursions_hybrid.find(
   }
 ).pretty();
 
-print("\n========== ZAPYTANIE 4: Wycieczki firmy COMP001 ==========\n");
 db.excursions_hybrid.aggregate([
   { 
     $match: { companyID: "COMP001" }
@@ -329,7 +322,6 @@ db.excursions_hybrid.aggregate([
   }
 ]).pretty();
 
-print("\n========== ZAPYTANIE 5: Osoby z wieloma rezerwacjami ==========\n");
 db.excursions_hybrid.aggregate([
   {
     $unwind: "$reservations"
@@ -357,7 +349,6 @@ db.excursions_hybrid.aggregate([
   }
 ]).pretty();
 
-print("\n========== ZAPYTANIE 6: Średnia cena wycieczek ==========\n");
 db.excursions_hybrid.aggregate([
   {
     $group: {
@@ -373,7 +364,6 @@ db.excursions_hybrid.aggregate([
   }
 ]).pretty();
 
-print("\n========== OPERACJA 1: Dodanie nowej recenzji ==========\n");
 db.excursions_hybrid.updateOne(
   { excursionID: "EXC001" },
   {
@@ -395,9 +385,7 @@ db.excursions_hybrid.updateOne(
     }
   }
 );
-print("✓ Dodano nową recenzję do wycieczki EXC001");
 
-print("\n========== OPERACJA 2: Nowa rezerwacja i aktualizacja miejsc ==========\n");
 db.excursions_hybrid.updateOne(
   { excursionID: "EXC002" },
   {
@@ -417,20 +405,11 @@ db.excursions_hybrid.updateOne(
     $inc: { availableSeats: -1 }
   }
 );
-print("✓ Dodano nową rezerwację - zmniejszono dostępne miejsca");
 
-print("\n========== OPERACJA 3: Zmiana ceny wycieczki ==========\n");
 db.excursions_hybrid.updateOne(
   { excursionID: "EXC003" },
   {
     $set: { pricePerPerson: 1950 }
   }
 );
-print("✓ Zmieniono cenę wycieczki EXC003");
 
-print("\n========== VERYFIKACJA: Aktualna struktura danych ==========\n");
-print("Liczba firm: " + db.companies.countDocuments({}));
-print("Liczba osób: " + db.persons.countDocuments({}));
-print("Liczba wycieczek: " + db.excursions_hybrid.countDocuments({}));
-
-print("\n========== KONIEC SKRYPTU ==========\n");
