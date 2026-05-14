@@ -741,16 +741,16 @@ Zaproponowałem system zarządzania wycieczkami organizowanymi przez firmy, gdzi
 ```
 
 **Zalety:**
-- ✅ Równowaga między wydajnością a normalizacją
-- ✅ Szybkie odczyty wycieczek z recenzjami
-- ✅ Mniej redundancji niż pełna denormalizacja
-- ✅ Możliwość weryfikacji danych poprzez referencje
-- ✅ Dobrze skaluje się dla tych konkretnych operacji
+-  Równowaga między wydajnością a normalizacją
+-  Szybkie odczyty wycieczek z recenzjami
+-  Mniej redundancji niż pełna denormalizacja
+-  Możliwość weryfikacji danych poprzez referencje
+-  Dobrze skaluje się dla tych konkretnych operacji
 
 **Wady:**
-- ❌ Złożoność w implementacji
-- ❌ Trzeba zarządzać duplikatami danych osób w rezerwacjach
-- ❌ Wymaga synchronizacji przy zmianach danych
+-  Złożoność w implementacji
+-  Trzeba zarządzać duplikatami danych osób w rezerwacjach
+-  Wymaga synchronizacji przy zmianach danych
 
 ---
 
@@ -1317,12 +1317,12 @@ db.excursions_hybrid.updateOne(
 
 | Operacja | Wariant 1 (Normalizowany) | Wariant 2 (Denormalizowany) | Wariant 3 (Hybrydowy) |
 |----------|---------------------------|-----------------------------|-----------------------|
-| Pobierz wycieczki z recenzjami | 3-5 lookup() | 1 zapytanie ✅ | 1 zapytanie ✅ |
-| Oblicz przychód | Złożona agregacja | Proste | Proste ✅ |
+| Pobierz wycieczki z recenzjami | 3-5 lookup() | 1 zapytanie  | 1 zapytanie  |
+| Oblicz przychód | Złożona agregacja | Proste | Proste  |
 | Zmiana danych osoby | 1 update | Wiele updates | Wymaga synchronizacji |
-| Rozmiar dokumentu | Mały | Ogromny | Średni ✅ |
-| Szybkość czytania | Wolna | Bardzo szybka ✅ | Szybka ✅ |
-| Spójność danych | Wysoka ✅ | Niska | Średnia |
+| Rozmiar dokumentu | Mały | Ogromny | Średni  |
+| Szybkość czytania | Wolna | Bardzo szybka  | Szybka  |
+| Spójność danych | Wysoka  | Niska | Średnia |
 
 **Wniosek:** Wariant 3 oferuje najlepszy balans między wydajnością a strukturą danych dla tego scenariusza.
 ```
