@@ -5,9 +5,27 @@
 
 ---
 
-**Imiona i nazwiska autorów:**
+**Imiona i nazwiska autorów:  Michał Kościanek, Michał Mąka**
 
 --- 
+
+<style>
+  {
+    font-size: 12pt;
+  }
+</style>
+
+<style scoped>
+ li, p {
+    font-size: 12pt;
+  }
+</style>
+
+<style scoped>
+ pre {
+    font-size: 10pt;
+  }
+</style>
 
 Odtwórz z backupu bazę `north0`
 
@@ -41,147 +59,151 @@ db.orderdetails.find();
 
 # Zadanie 1 - operacje wyszukiwania danych,  przetwarzanie dokumentów
 
+## Zadanie 1 - rozwiązania - Michał Mąka, code review & help - Michał Kościanek
+
 # a)
 
 stwórz kolekcję  `OrdersInfo`  zawierającą następujące dane o zamówieniach
 - kolekcję  `OrdersInfo` należy stworzyć przekształcając dokumenty w oryginalnych kolekcjach `customers, orders, orderdetails, employees, shippers, products, categories, suppliers` do kolekcji  w której pojedynczy dokument opisuje jedno zamówienie
 
 ```js
-db.orders.aggregate([{
-    $lookup:{from:"customers",
-        localField:"CustomerID",
-        foreignField:"CustomerID",
-        as:"Customer"}
-    },
-    {
-        $lookup:{from:"employees",
-            localField:"EmpolyeeID",
-            foreignField:"EmpolyeeID",
-            as:"Employee"}
+db.orders.aggregate([
+  {
+    $lookup: {
+      from: "customers",
+      localField: "CustomerID",
+      foreignField: "CustomerID",
+      as: "Customer"
+    }
+  },
+  { $unwind: "$Customer" },
+  {
+    $lookup: {
+      from: "employees",
+      localField: "EmployeeID",
+      foreignField: "EmployeeID",
+      as: "Employee"
+    }
+  },
+  { $unwind: "$Employee" },
+  {
+    $lookup: {
+      from: "shippers",
+      localField: "ShipVia",
+      foreignField: "ShipperID",
+      as: "Shipper"
+    }
+  },
+  { $unwind: "$Shipper" },
+
+  {
+    $lookup: {
+      from: "orderdetails",
+      localField: "OrderID",
+      foreignField: "OrderID",
+      as: "Orderdetails"
+    }
+  },
+  { $unwind: "$Orderdetails" },
+
+  {
+    $lookup: {
+      from: "products",
+      localField: "Orderdetails.ProductID",
+      foreignField: "ProductID",
+      as: "Orderdetails.Product"
+// zamiast osobno wydzielać, dodajemy do OrderDetails
+    }
+  },
+  { $unwind: "$Orderdetails.Product" },
+  {
+    $lookup: {
+      from: "categories",
+      localField: "Orderdetails.Product.CategoryID",
+      foreignField: "CategoryID",
+      as: "Orderdetails.Product.Category"
+    }
+  },
+  { $unwind: "$Orderdetails.Product.Category" },
+
+  {
+    $lookup: {
+      from: "suppliers",
+      localField: "Orderdetails.Product.SupplierID",
+      foreignField: "SupplierID",
+      as: "Orderdetails.Product.Supplier"
+    }
+  },
+  { $unwind: "$Orderdetails.Product.Supplier" },
+
+  // zgrupowanie wszystkich danych
+  {
+    $group: {
+      _id: "$_id",
+// stosujemy first, bo te OrderID sie powtarzają (unwind)
+      OrderID: { $first: "$OrderID" },
+        Dates: {
+          $first: {
+            OrderDate: "$OrderDate",
+            RequiredDate: "$RequiredDate",
+            /*ShippedDate: "$ShippedDate" */ }
         },
-    {
-        $lookup:{from:"orderdetails",
-            localField:"OrderID",
-            foreignField:"OrderID",
-            as:"Orderdetails"}
+      Customer: { $first: {
+        CustomerID: "$Customer.CustomerID",
+        CompanyName: "$Customer.CompanyName",
+        City: "$Customer.City",
+        Country: "$Customer.Country"
+      }},
+      Employee: { $first: {
+            EmployeeID: "$Employee.EmployeeID",
+            FirstName: "$Employee.FirstName",
+            LastName: "$Employee.LastName",
+            Title: "$Employee.Title"
+      }},
+      Shipment: { $first: {
+        "Shipper": {
+            "ShipperID":  "$shipper.ShipperID",
+            "CompanyName": "$shipper.CompanyName"
+            },
+        "ShipName": "$ShipName",
+        "ShipAddress": "$ShipAddress",
+        "ShipCity": "$ShipCity",
+        "ShipCountry": "$ShipCountry"
         },
-    {
-        $lookup:{from:"shippers",
-            localField:"ShipperID",
-            foreignField:"ShipperID",
-            as:"shipper"}
-        },
-    {
-        $lookup:{from:"products",
-            localField:"orderdetail.ProductID",
-            foreignField:"ProductID",
-            as:"product"}
-        },
-    {
-        $lookup:{from:"categories",
-            localField:"CategoryID",
-            foreignField:"CategoryID",
-            as:"category"}
-        },
-    {$unwind:"$customer"},
-    {$unwind:"$employee"},
-
-    {$limit:1},
-    {
-        $project: {
-            _id: 1,
-            OrderID: 1,
-
-
-            "Customer": {
-                "CustomerID": "$Customer.CustomerID",
-                "CompanyName": "$Customer.CompanyName",
-                "City": "$Customer.City",
-                "Country": "$Customer.Country"
-                },
-
-
-            "Employee": {
-                "EmployeeID": "$Employee.EmployeeID",
-                "FirstName": "$Employee.FirstName",
-                "LastName": "$Employee.LastName",
-                "Title": "$Employee.Title"
-                },
-
-
-            "Dates": {
-                "OrderDate": "$OrderDate",
-                "RequiredDate": "$RequiredDate"
-                },
-
-
-            "Orderdetails": {
-                $map: {
-                    input: "$Orderdetails",
-                    as: "od",
-                    in: {
-                        "UnitPrice": "$$od.UnitPrice",
-                        "Quantity": "$$od.Quantity",
-                        "Discount": "$$od.Discount",
-                        "Value": {
-                            $multiply: [
-                                "$$od.UnitPrice",
-                                "$$od.Quantity",
-                                { $subtract: [1, { $ifNull: ["$$od.Discount", 0] }] }
-                                ]
-                            },
-                        "product": {
-                            $arrayElemAt: [
-                                {
-                                    $filter: {
-                                        input: "$product",
-                                        as: "p",
-                                        cond: { $eq: ["$$p.ProductID", "$$od.ProductID"] }
-                                        }
-                                    },
-                                0
-                                ]
-                            }
-                        }
-                    }
-                },
-
-            "Freight": 1,
-
-            "OrderTotal": {
-                $sum: {
-                    $map: {
-                        input: "$Orderdetails",
-                        as: "od",
-                        in: {
-                            $multiply: [
-                                "$$od.UnitPrice",
-                                "$$od.Quantity",
-                                { $subtract: [1, { $ifNull: ["$$od.Discount", 0] }] }
-                                ]
-                            }
-                        }
-                    }
-                },
-
-            "Shipment": 
-                {
-                "Shipper": {
-                    "ShipperID": { "$shipper.ShipperID"},
-                    "CompanyName": "$shipper.CompanyName" }
-                    },
-                "ShipName": "$ShipName",
-                "ShipAddress": "$ShipAddress",
-                "ShipCity": "$ShipCity",
-                "ShipCountry": "$ShipCountry"
-                }
-            }
+      },
+      Orderdetails: {
+      //oddzielne dopisujemy
+        $push: {
+          UnitPrice: "$Orderdetails.UnitPrice",
+          Quantity: "$Orderdetails.Quantity",
+          Discount: "$Orderdetails.Discount",
+          Value: "$Orderdetails.Value",
+          Product: {
+            ProductID: "$Orderdetails.ProductID",
+            ProductName: "$Orderdetails.ProductName",
+            QuantityPerUnit: "$Orderdetails.QuantityPerUnit",
+            CategoryID: "$Orderdetails.Product.CategoryID",
+            CategoryName: "$Orderdetails.Product.CategoryName",
+            },
         }
-
-    ])
+      },
+      OrderTotal: {
+        $sum: {
+          $multiply: [
+            "$Orderdetails.UnitPrice",
+            "$Orderdetails.Quantity",
+            { $subtract: [1, "$Orderdetails.Discount"] }
+          ]
+        }
+      },
+      Freight: { $first: "$Freight"}
+    }
+  },
+  { $out: "OrdersInfo" },
+]);
 ```
 
-spodziewany wynik:
+## spodziewany wynik:
 
 ```js
 [  
@@ -244,14 +266,113 @@ spodziewany wynik:
   } 
 ]  
 ```
+## wynik
 
+```js
+[
+  {
+    "_id": {"$oid": "63a060b9bb3b972d6f4e208b"},
+    "Customer": {
+      "CustomerID": "BERGS",
+      "CompanyName": "Berglunds snabbköp",
+      "City": "Luleå",
+      "Country": "Sweden"
+    },
+    "Dates": {
+      "OrderDate": {"$date": "1997-02-13T00:00:00.000Z"},
+      "RequiredDate": {"$date": "1997-03-13T00:00:00.000Z"}
+    },
+    "Employee": {
+      "EmployeeID": 3,
+      "FirstName": "Janet",
+      "LastName": "Leverling",
+      "Title": "Sales Representative"
+    },
+    "Freight": 9.3,
+    "OrderID": 10445,
+    "OrderTotal": 174.9,
+    "Orderdetails": [
+      {
+        "UnitPrice": 14.4,
+        "Quantity": 6,
+        "Discount": 0,
+        "Product": {
+          "ProductID": 39,
+          "CategoryID": 1
+        }
+      },
+      {
+        "UnitPrice": 5.9,
+        "Quantity": 15,
+        "Discount": 0,
+        "Product": {
+          "ProductID": 54,
+          "CategoryID": 6
+        }
+      }
+    ],
+    "ShipAddress": "Berguvsvägen  8",
+    "Shipment": {
+      "Shipper": {
+      },
+      "ShipName": "Berglunds snabbköp",
+      "ShipAddress": "Berguvsvägen  8",
+      "ShipCity": "Luleå",
+      "ShipCountry": "Sweden"
+    }
+  }
+]
+```
 
 # b)
 
 stwórz kolekcję  `CustomerInfo`  zawierającą następujące dane każdym kliencie
 - pojedynczy dokument opisuje jednego klienta
 
-spodziewany wynik:
+```js
+db.customers.aggregate([
+  {
+    $lookup: {
+      from: "OrdersInfo",
+      localField: "CustomerID",
+      foreignField: "Customer.CustomerID",
+      as: "Orders"
+    }
+  },
+
+  {
+    $project: {
+      _id: 1,
+      CustomerID: 1,
+      CompanyName: 1,
+      City: 1,
+      Country: 1,
+      // wybieramy to co nam potrzeba
+      Orders: {
+        $map: {
+          input: "$Orders",
+          as: "order",
+          in: {
+            // $$ - odniesienie do zmiennej (przez map)
+            OrderID: "$$order.OrderID",
+            Dates: "$$order.Dates",
+            Employee: "$$order.Employee",
+            Orderdetails: "$$order.Orderdetails",
+            Freight: "$$order.Freight",
+            OrderTotal: "$$order.OrderTotal",
+            ShipAddress: "$$order.ShipAddress",
+            Shipment: "$$order.Shipment"
+          }
+        }
+      }
+    }
+  },
+
+  { $out: "CustomerInfo" }
+]);
+```
+
+## spodziewany wynik:
 
 ```js
 [  
@@ -264,34 +385,29 @@ spodziewany wynik:
     "Country": ... kraj 
 
 	"Orders": [ ... tablica zamówień klienta o strukturze takiej jak w punkcie a) 
-	                (oczywiście bez informacji o kliencie)
-	  
-	]
-
-		  
+	                (oczywiście bez informacji o kliencie) 
+	]	  
 ]  
 ```
 
-rozwiazanie (czesciowe):
+## wynik
+
 ```js
-
-db.customers.aggregate([
-    {
-        $project:{
-            _id: 1,
-            CustomerId: 1,
-            CompanyName: 1,
-            City: 1,
-            Country: 1,
-
-//            Orders: {
-//
-//                }
-
-            },
-        },
-    { $out: "CustomerInfo" }
-])
+[
+  {
+    "_id": {"$oid": "63a05cdfbb3b972d6f4e097b"},
+    "City": "Berlin",
+    "CompanyName": "Alfreds Futterkiste",
+    "Country": "Germany",
+    "CustomerID": "ALFKI",
+    "Orders": [
+      {
+        "OrderID": 10643,
+        "Dates": {
+          "OrderDate": {"$date": "1997-08-25T00:00:00.000Z"},
+          "RequiredDate": {"$date": "1997-09-22T00:00:00.000Z"}
+        },... 
+        // wynik ma 270 linii kodu (dla limit(1))
 ```
 
 # c) 
@@ -318,62 +434,191 @@ Napisz polecenie/zapytanie: Dla każdego klienta pokaż wartość zakupionych pr
 ]  
 ```
 
-rozwiazanie (czesciowe):
+rozwiazanie:
 ```js
+
+//oryginalne kolekcje (customers, orders, orderdetails, products, categories)
+db.customers.find()
+db.orders.find()
+db.orderdetails.find()
+
 db.customers.aggregate([
-    {
-        $lookup: {
-            from: "orders",
-            localField: "CustomerID",
-            foreignField: "CustomerID",
-            as: "Order"
-        },
-    },
-        {$unwind: "$Order"},
-    {
-        $lookup: {
-            from: "orderdetails",
-            localField: "Order.OrderID",
-            foreignField: "OrderID",
-            as: "OrderDetail"
-            }
-    },
-            {$unwind: "$OrderDetail"},
-    {
-        $lookup: {
-            from: "products",
-            localField: "OrderDetail.ProductID",
-            foreignField: "ProductID",
-            as: "ProductInfo"
-            }
-    },
-            {$unwind: "$ProductInfo"},
-    {
-        $lookup: {
-            from: "categories",
-            localField: "ProductInfo.CategoryID",
-            foreignField: "CategoryID",
-            as: "Category"
-            }
-    },
-    {$unwind: "$Category"},
-    {
-        $match: {"Category.CategoryName": "Confections"}
-    },
-    {
-        $match:
+  {
+    $lookup: {
+      from: "orders",
+      let: { custId: "$CustomerID" }, // przypisanie do custId
+      pipeline: [
         {
+          $match: {
             $expr: {
-                $eq: [{ $year: {$toDate: "$OrderDate"} }, 1997]
-                }
+              $and: [
+                { $eq: ["$CustomerID", "$$custId"] },
+                { $eq: [{ $year: "$OrderDate" }, 1997] }
+              ]
             }
+          }
         },
-    {$limit: 1}
+        { $lookup: { from: "orderdetails", localField: "OrderID", 
+          foreignField: "OrderID", as: "details" } },
+        { $unwind: "$details" },
+        { $lookup: { from: "products", localField: "details.ProductID", 
+          foreignField: "ProductID", as: "product" } },
+        { $unwind: "$product" },
+        { $lookup: { from: "categories", localField: "product.CategoryID", 
+          foreignField: "CategoryID", as: "category" } },
+        { $unwind: "$category" },
+        // filtr na confections
+        { $match: { "category.CategoryName": "Confections" } },
+        {
+          $project: {
+            value: {
+              $multiply: [
+                "$details.UnitPrice",
+                "$details.Quantity",
+                { $subtract: [1, "$details.Discount"] }
+              ]
+            }
+          }
+        }
+      ],
+      as: "orders_with_conf_1997"
+    }
+  },
+  {
+    $project: {
+      _id: 1,
+      CustomerID: 1,
+      CompanyName: 1,
+      ConfectionsSale97: { $sum: "$orders_with_conf_1997.value" }
+    }
+  },
+]);
+
+db.orderdetails.find().limit(1)
+db.OrdersInfo.find().limit(1)
+
+//1c wykorzystując OrderInfo
+
+db.OrdersInfo.aggregate([
+  {
+    $unwind: {
+      path: "$Orderdetails",
+    }
+  },
+  {
+    $group: {
+      _id: "$Customer.CustomerID",
+      CompanyName: { $first: "$Customer.CompanyName" },
+      ConfectionsSale97: {
+        $sum: {
+          $cond: [
+            // if
+            {
+              $and: [
+                { $gte: ["$Dates.OrderDate", ISODate("1997-01-01")] },
+                { $lt: ["$Dates.OrderDate", ISODate("1998-01-01")] },
+                { $eq: ["$Orderdetails.Product.CategoryName", 
+                  "Confections"] }
+              ]
+            },
+            // true
+            {
+              $multiply: [
+                "$Orderdetails.UnitPrice",
+                "$Orderdetails.Quantity",
+                { $subtract: [1, "$Orderdetails.Discount"] }
+              ]
+            },
+            // false
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 1,
+      CustomerID: "$_id",
+      CompanyName: 1,
+      ConfectionsSale97: 1
+    }
+  }
+]);
+
+//1c wykorzystując CustomerInfo
 
 
-])
+db.CustomerInfo.aggregate([
+  {
+    $unwind: {
+      path: "$Orders",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $unwind: {
+      path: "$Orders.Orderdetails",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+  {
+    $group: {
+      _id: "$CustomerID",
+      CompanyName: { $first: "$CompanyName" },
+      ConfectionsSale97: {
+        $sum: {
+          $cond: [
+            // if
+            {
+              $and: [
+                { $gte: ["$Orders.Dates.OrderDate", ISODate("1997-01-01")] },
+                { $lt: ["$Orders.Dates.OrderDate", ISODate("1998-01-01")] },
+                { $eq: ["$Orders.Orderdetails.Product.CategoryName", 
+                  "Confections"] }
+              ]
+            },
+            // true
+            {
+              $multiply: [
+                "$Orders.Orderdetails.UnitPrice",
+                "$Orders.Orderdetails.Quantity",
+                { $subtract: [1, "$Orders.Orderdetails.Discount"] }
+              ]
+            },
+            // false
+            0
+          ]
+        }
+      }
+    }
+  },
+  {
+    $project: {
+      _id: 1,
+      CustomerID: "$_id",
+      CompanyName: 1,
+      ConfectionsSale97: 1
+    }
+  }
+]);
 
 ```
+
+## wynik:
+
+dla wszystkich rozwiązań jest spójny wynik:
+```js
+...  {
+    "_id": {"$oid": "63a05cdfbb3b972d6f4e097e"},
+    "CompanyName": "Around the Horn",
+    "ConfectionsSale97": 375.19999977201223,
+    "CustomerID": "AROUT"
+  },...
+```
+
+
+### UWAGA: wynik nie jest dokładnie taki sam w przypadku operowania na OrdersInfo, w wyniku nie znajdziemy takich klientów, którzy nie mają zamówień
 
 # d)
 
@@ -386,25 +631,281 @@ Spróbuj napisać to zapytanie wykorzystując
 - porównaj zapytania/polecenia/wyniki
 
 ```js
-[  
-  {  
-    "_id": 
-    
-    "CustomerID": ... identyfikator klienta
-    "CompanyName": ... nazwa klienta
 
-	"Sale": [ ... tablica zawierająca inf o sprzedazy
-	    {
-            "Year":  ....
-            "Month": ....
-            "Total": ...	    
-	    }
-	    ...
-	]
-  }		  
-]  
+// 1d - oryginalne kolekcje
+
+db.customers.aggregate([
+  {
+    $lookup: {
+      from: "orders",
+      localField: "CustomerID",
+      foreignField: "CustomerID",
+      as: "Order"
+    }
+  },
+  { $unwind: { path: "$Order", preserveNullAndEmptyArrays: true } },
+    {
+    $lookup: {
+      from: "orderdetails",
+      localField: "Order.OrderID",
+      foreignField: "OrderID",
+      as: "OrderDetail"
+    }
+  },
+  { $unwind: { path: "$OrderDetail", preserveNullAndEmptyArrays: true } },
+  {
+    $lookup: {
+      from: "products",
+      localField: "OrderDetail.ProductID",
+      foreignField: "ProductID",
+      as: "Product"
+    }
+  },
+  { $unwind: { path: "$Product", preserveNullAndEmptyArrays: true } },
+    {
+    $lookup: {
+      from: "categories",
+      localField: "Product.CategoryID",
+      foreignField: "CategoryID",
+      as: "Category"
+    }
+  },
+  { $unwind: { path: "$Category", preserveNullAndEmptyArrays: true } },
+    // grupowanie ze wzdlegu na rok i miesiąc
+  {
+    $group: {
+      _id: {
+        CustomerID: "$CustomerID",
+        CompanyName: "$CompanyName",
+        Year: { $year: "$Order.OrderDate" },
+        Month: { $month: "$Order.OrderDate" }
+      },
+      MonthlyValue: {
+        $sum: {
+          $cond: [
+            { $ifNull: ["$OrderDetail.UnitPrice", false] }, // czy istnieje
+            {
+              $multiply: [
+                "$OrderDetail.UnitPrice",
+                "$OrderDetail.Quantity",
+                { $subtract: [1, "$OrderDetail.Discount"] }
+              ]
+            },
+            0 // brak zamowień
+          ]
+        }
+      }
+    }
+  },
+
+// do jednego klienta
+  {
+    $group: {
+      _id: "$_id.CustomerID",
+      CompanyName: { $first: "$_id.CompanyName" },
+      TotalLifetimeValue: { $sum: "$MonthlyValue" },
+      SalesHistory: {
+        $push: {
+          Year: "$_id.Year",
+          Month: "$_id.Month",
+          Value: "$MonthlyValue"
+        }
+      }
+    }
+  },
+
+  {
+    $project: {
+      _id: 0,
+      CustomerID: "$_id",
+      CompanyName: 1,
+      TotalLifetimeValue: 1,
+      SalesHistory: "$SalesHistory"
+      }
+    }
+]);
+
+
+
+
+// 1d - OrdersInfo
+
+db.OrdersInfo.aggregate([
+  {
+    $unwind: {
+      path: "$Orderdetails",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+
+    // group: year + month
+  {
+    $group: {
+      _id: {
+        CustomerID: "$Customer.CustomerID",
+        CompanyName: "$Customer.CompanyName",
+        Year: { $year: "$Dates.OrderDate" },
+        Month: { $month: "$Dates.OrderDate" }
+      },
+      MonthlyValue: {
+        $sum: {
+          $cond: [
+            { $ifNull: ["$Orderdetails.UnitPrice", false] },
+            {
+              $multiply: [
+                "$Orderdetails.UnitPrice",
+                "$Orderdetails.Quantity",
+                { $subtract: [1, "$Orderdetails.Discount"] }
+              ]
+            },
+            0 // nie ma
+          ]
+        }
+      }
+    }
+  },
+        // group: by customer
+  {
+    $group: {
+      _id: "$_id.CustomerID",
+      CompanyName: { $first: "$_id.CompanyName" },
+      TotalLifetimeValue: { $sum: "$MonthlyValue" },
+      SalesHistory: {
+        $push: {
+          Year: "$_id.Year",
+          Month: "$_id.Month",
+          Value: "$MonthlyValue"
+        }
+      }
+    }
+  },
+
+  {
+    $project: {
+      _id: 0,
+      CustomerID: "$_id",
+      CompanyName: 1,
+      TotalLifetimeValue: 1,
+      SalesHistory: "$SalesHistory"
+    }
+  },
+]);
+
+
+// 1d - customerInfo
+
+db.CustomerInfo.aggregate([
+  {
+    $unwind: {
+      path: "$Orders",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+
+  {
+    $unwind: {
+      path: "$Orders.Orderdetails",
+      preserveNullAndEmptyArrays: true
+    }
+  },
+
+  {
+    $group: {
+      _id: {
+        CustomerID: "$CustomerID",
+        CompanyName: "$CompanyName",
+        Year: { $year: "$Orders.Dates.OrderDate" },
+        Month: { $month: "$Orders.Dates.OrderDate" }
+      },
+      MonthlyValue: {
+        $sum: {
+          $cond: [
+            { $ifNull: ["$Orders.Orderdetails.UnitPrice", false] },
+            {
+              $multiply: [
+                "$Orders.Orderdetails.UnitPrice",
+                "$Orders.Orderdetails.Quantity",
+                { $subtract: [1, "$Orders.Orderdetails.Discount"] }
+              ]
+            },
+            0
+          ]
+        }
+      }
+    }
+  },
+
+  {
+    $group: {
+      _id: "$_id.CustomerID",
+      CompanyName: { $first: "$_id.CompanyName" },
+      TotalLifetimeValue: { $sum: "$MonthlyValue" },
+      SalesHistory: {
+        $push: {
+          Year: "$_id.Year",
+          Month: "$_id.Month",
+          Value: "$MonthlyValue"
+        }
+      }
+    }
+  },
+
+  {
+    $project: {
+      _id: 0,
+      CustomerID: "$_id",
+      CompanyName: 1,
+      TotalLifetimeValue: 1,
+      SalesHistory: "$SalesHistory"
+    }
+  },
+]);
+
 ```
 
+## Wyniki: (dla wszystkich + per customer)
+```js
+  {
+    "CompanyName": "Let's Stop N Shop",
+    "CustomerID": "LETSS",
+    "SalesHistory": [
+      {
+        "Year": 1998,
+        "Month": 2,
+        "Value": 1378.0699989192187
+      },
+      {
+        "Year": 1997,
+        "Month": 10,
+        "Value": 844.2525
+      },
+      {
+        "Year": 1997,
+        "Month": 11,
+        "Value": 536.3999991118908
+      },
+      {
+        "Year": 1997,
+        "Month": 6,
+        "Value": 317.75
+      }
+    ],
+    "TotalLifetimeValue": 3076.4724980311094
+  },
+  {
+    "CompanyName": "FISSA Fabrica Inter. Salchichas S.A.",
+    "CustomerID": "FISSA",
+    "SalesHistory": [
+      {
+        "Year": null,
+        "Month": null,
+        "Value": 0
+      }
+    ],
+    "TotalLifetimeValue": 0
+  },
+```
+### UWAGA: powyższy wynik, nie jest taki sam w przypadku operowania na OrdersInfo, wynik dla FISSA, jest nieobecny, ponieważ, nie znajduje się on w OrdersInfo (brak zamówień)
 # e)
 
 Załóżmy że pojawia się nowe zamówienie dla klienta 'ALFKI',  zawierające dwa produkty 'Chai' oraz "Ikura"
@@ -415,9 +916,227 @@ Napisz polecenie które dodaje takie zamówienie do bazy
 - aktualizując kolekcję `CustomerInfo`
 
 Napisz polecenie 
-- aktualizując oryginalną kolekcję orderdetails`
+- aktualizując oryginalną kolekcję orderdetails
 - aktualizując kolekcję `OrderInfo`
 - aktualizując kolekcję `CustomerInfo`
+
+### dodawanie danych
+
+```js
+
+db.products.find({ "ProductName": "Chai" }) // unitprice = 18
+db.products.find({ "ProductName": "Ikura" }) // unitprice = 31
+
+// 1e kolekcje (orders + orderdetails)
+db.orders.insertOne({
+  OrderID: 99999,
+  CustomerID: "ALFKI",
+  EmployeeID: 1,
+  OrderDate: ISODate("2026-05-15"),
+  RequiredDate: ISODate("2026-06-15"),
+  ShipVia: 1,
+  Freight: 15.50,
+  ShipName: "Alfreds Futterkiste",
+  ShipAddress: "Obere Str. 57",
+  ShipCity: "Berlin",
+  ShipCountry: "Germany"
+});
+
+db.orderdetails.insertMany([
+  { OrderID: 99999, ProductID: 1, UnitPrice: 18.00, 
+      Quantity: 10, Discount: 0 },   // Chai
+
+  { OrderID: 99999, ProductID: 10, UnitPrice: 31.00, 
+      Quantity: 5, Discount: 0 }    // Ikura
+]);
+
+db.customers.find({ "CustomerID": "ALFKI" })
+db.employees.find({ "EmployeeID": 1 })
+
+
+// 1e OrdersInfo
+db.OrdersInfo.insertOne({
+  OrderID: 99999,
+  Customer: {
+    CustomerID: "ALFKI",
+    CompanyName: "Alfreds Futterkiste",
+    City: "Berlin",
+    Country: "Germany"
+  },
+  Dates: {
+    OrderDate: ISODate("2026-05-15"),
+    RequiredDate: ISODate("2026-06-15")
+  },
+  Employee: { EmployeeID: 1, FirstName: "Nancy", 
+      LastName: "Davolio", Title: "Sales Representative" },
+  Freight: 15.50,
+  OrderTotal: 335.00, // 18*10+31*5
+  Shipment: {
+    Shipper: { ShipperID: 1, CompanyName: "Speedy Express" },
+    ShipName: "Alfreds Futterkiste",
+    ShipAddress: "Obere Str. 57",
+    ShipCity: "Berlin",
+    ShipCountry: "Germany"
+  },
+  Orderdetails: [
+    {
+      UnitPrice: 18.00, Quantity: 10, Discount: 0,
+      Product: { ProductID: 1, ProductName: "Chai", 
+          CategoryID: 1, CategoryName: "Beverages" }
+    },
+    {
+      UnitPrice: 31.00, Quantity: 5, Discount: 0,
+      Product: { ProductID: 10, ProductName: "Ikura", 
+          CategoryID: 8, CategoryName: "Seafood" }
+    }
+  ]
+});
+
+
+// 1e customerInfo
+
+db.CustomerInfo.updateOne(
+  { CustomerID: "ALFKI" },
+  {
+    $push: { // dodaj do tablicy Orders klienta
+      Orders: {
+        OrderID: 99999,
+        Dates: { OrderDate: ISODate("2026-05-15T00:00:00Z"), 
+                RequiredDate: ISODate("2026-06-15T00:00:00Z") },
+        Employee: { EmployeeID: 1, FirstName: "Nancy", 
+                    LastName: "Davolio", Title: "Sales Representative" },
+        Freight: 15.50,
+        OrderTotal: 335.00,
+        Shipment: {
+            Shipper: { ShipperID: 1, CompanyName: "Speedy Express" },
+            ShipName: "Alfreds Futterkiste",
+            ShipAddress: "Obere Str. 57",
+            ShipCity: "Berlin",
+            ShipCountry: "Germany"
+          },
+        Orderdetails: [
+          { UnitPrice: 18.00, Quantity: 10, Discount: 0, 
+            Product: { ProductID: 1, ProductName: "Chai" }},
+          { UnitPrice: 31.00, Quantity: 5, Discount: 0, 
+            Product: { ProductID: 10, ProductName: "Ikura" }}
+        ]
+      }
+    }
+  }
+);
+```
+
+### edycja danych
+
+```js
+
+
+// aktualizacja 1e kolekcje
+db.orderdetails.updateOne(
+  { OrderID: 99999, ProductID: 1 },
+  { $set: { Quantity: 20 } }
+);
+
+// aktualizacja 1e OrdersInfo
+
+db.OrdersInfo.updateOne(
+  { OrderID: 99999 },
+  {
+    $set: {
+      "Orderdetails.$[elem].Quantity": 20, // dla elem
+      "OrderTotal": 515.00      // suma sie zmienia
+    }
+  },
+  { // przypisanie
+    arrayFilters: [ { "elem.Product.ProductID": 1 } ]   // := elem
+  }
+);
+
+// aktualizacja 1e CustomerInfo
+
+db.CustomerInfo.updateOne(
+  { CustomerID: "ALFKI" },
+  {
+    $set: {
+      // "ord" to element tablicy Orders, a "prod" to element Orderdetails
+      "Orders.$[ord].Orderdetails.$[prod].Quantity": 20,
+      "Orders.$[ord].OrderTotal": 515.00 // suma sie zmienia
+    }
+  },
+  {
+    arrayFilters: [ // przypisania
+      { "ord.OrderID": 99999 },       // := ord (orderid = 99999)
+      { "prod.Product.ProductID": 1 } // := prod (prodid = 1)
+    ]
+  }
+);
+```
+
+## Wynik
+```js
+
+// np. OrdersInfo
+[
+  {
+    "_id": {"$oid": "6a067a0940cc6835962cdab3"},
+    "Customer": {
+      "CustomerID": "ALFKI",
+      "CompanyName": "Alfreds Futterkiste",
+      "City": "Berlin",
+      "Country": "Germany"
+    },
+    "Dates": {
+      "OrderDate": {"$date": "2026-05-15T00:00:00.000Z"},
+      "RequiredDate": {"$date": "2026-06-15T00:00:00.000Z"}
+    },
+    "Employee": {
+      "EmployeeID": 1,
+      "FirstName": "Nancy",
+      "LastName": "Davolio",
+      "Title": "Sales Representative"
+    },
+    "Freight": 15.5,
+    "OrderID": 99999,
+    "OrderTotal": 515,
+    "Orderdetails": [
+      {
+        "UnitPrice": 18,
+        "Quantity": 20,
+        "Discount": 0,
+        "Product": {
+          "ProductID": 1,
+          "ProductName": "Chai",
+          "CategoryID": 1,
+          "CategoryName": "Beverages"
+        }
+      },
+      {
+        "UnitPrice": 31,
+        "Quantity": 5,
+        "Discount": 0,
+        "Product": {
+          "ProductID": 10,
+          "ProductName": "Ikura",
+          "CategoryID": 8,
+          "CategoryName": "Seafood"
+        }
+      }
+    ],
+    "Shipment": {
+      "Shipper": {
+        "ShipperID": 1,
+        "CompanyName": "Speedy Express"
+      },
+      "ShipName": "Alfreds Futterkiste",
+      "ShipAddress": "Obere Str. 57",
+      "ShipCity": "Berlin",
+      "ShipCountry": "Germany"
+    }
+  }
+]
+```
+## porównanie:
+Odczytywanie danych z kolekcji `CustomerInfo` lub `OrdersInfo` jest łatwe i wygodne, ale dodawanie, a szczególnie modifikowanie danych to katastrofa, dodatkowo łatwo jest coś zgubić.
 
 # f)
 
@@ -428,32 +1147,252 @@ Napisz polecenie
 - aktualizując kolekcję `OrderInfo`
 - aktualizując kolekcję `CustomerInfo`
 
+```js
 
+
+// 1f kolekcje
+
+db.orderdetails.updateMany(
+  { OrderID: 99999 },
+  { $inc: { Discount: 0.05 } } //zwiększ o
+);
+
+// 1f OrdersInfo
+db.OrdersInfo.updateOne(
+  { OrderID: 99999 },
+  [ // [] Aggregation Pipeline
+
+  // + 5% discount
+    {
+      $set: {
+        Orderdetails: {
+          $map: {
+            input: "$Orderdetails",
+            as: "item",
+            in: {
+              // $mergeObjects nadpisuje tylko discount, reszte zostawia
+              $mergeObjects: [
+                "$$item",
+                { Discount: { $add: ["$$item.Discount", 0.05] } }
+              ]
+            }
+          }
+        }
+      }
+    },
+
+    // musimy przeliczyc OrderTotal
+    {
+      $set: {
+        OrderTotal: {
+          $sum: {
+            $map: {
+              input: "$Orderdetails", // to jest już ta NOWA tablica
+              as: "item",
+              in: {
+                $multiply: [
+                  "$$item.UnitPrice",
+                  "$$item.Quantity",
+                  { $subtract: [1, "$$item.Discount"] }
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+);
+
+// aktualizacja discount, podzielona na 2, bo to jakas masakra z pipeline
+// 1. discount
+db.CustomerInfo.updateOne(
+  { CustomerID: "ALFKI" }, // Znajdź klienta
+  {
+    $inc: {
+      // w [ord] dla wszystkich produktów ($[]), inc. 0.05
+      "Orders.$[ord].Orderdetails.$[].Discount": 0.05
+    }
+  },
+  {
+    arrayFilters: [
+      { "ord.OrderID": 99999 } // := ord
+    ]
+  }
+);
+
+// 2. aktualizacja OrderTotal
+db.CustomerInfo.updateOne(
+  { CustomerID: "ALFKI", "Orders.OrderID": 99999 },
+  [
+    {
+      $set: {
+        Orders: {
+          $map: {
+            input: "$Orders",
+            as: "order",
+            in: {
+              $cond: {
+                if: { $eq: ["$$order.OrderID", 99999] },
+          // Jeśli to szukane zamówienie, nadpisujemy tylko OrderTotal
+                then: {
+                  $mergeObjects: [
+                    "$$order",
+                    {
+                    // wyliczenie nowego OrderTotal
+                      OrderTotal: {
+                        $sum: {
+                          $map: {
+                            input: "$$order.Orderdetails", // po zmianie
+                            as: "prod",
+                            in: {
+                              $multiply: [
+                                "$$prod.UnitPrice",
+                                "$$prod.Quantity",
+                                { $subtract: [1, "$$prod.Discount"] }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  ]
+                },
+                // jeśli to inne zamówienie, zostawiamy je w spokoju
+                else: "$$order"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+);
+```
+
+## wyniki
+
+```js
+// OrdersInfo:
+[
+  {
+    "_id": {"$oid": "6a067a0940cc6835962cdab3"},
+    "Customer": {
+      "CustomerID": "ALFKI",
+      "CompanyName": "Alfreds Futterkiste",
+      "City": "Berlin",
+      "Country": "Germany"
+    },
+    "Dates": {
+      "OrderDate": {"$date": "2026-05-15T00:00:00.000Z"},
+      "RequiredDate": {"$date": "2026-06-15T00:00:00.000Z"}
+    },
+    "Employee": {
+      "EmployeeID": 1,
+      "FirstName": "Nancy",
+      "LastName": "Davolio",
+      "Title": "Sales Representative"
+    },
+    "Freight": 15.5,
+    "OrderID": 99999,
+    "OrderTotal": 489.25,
+    "Orderdetails": [
+      {
+        "UnitPrice": 18,
+        "Quantity": 20,
+        "Discount": 0.05,
+        "Product": {
+          "ProductID": 1,
+          "ProductName": "Chai",
+          "CategoryID": 1,
+          "CategoryName": "Beverages"
+        }
+      },
+      {
+        "UnitPrice": 31,
+        "Quantity": 5,
+        "Discount": 0.05,
+        "Product": {
+          "ProductID": 10,
+          "ProductName": "Ikura",
+          "CategoryID": 8,
+          "CategoryName": "Seafood"
+        }
+      }
+    ],
+    "Shipment": {
+      "Shipper": {
+        "ShipperID": 1,
+        "CompanyName": "Speedy Express"
+      },
+      "ShipName": "Alfreds Futterkiste",
+      "ShipAddress": "Obere Str. 57",
+      "ShipCity": "Berlin",
+      "ShipCountry": "Germany"
+    }
+  }
+]
+
+// CustomerInfo 
+[
+  {
+    "CustomerID": "ALFKI",
+    "Orders": [
+      {
+        "OrderID": 99999,
+        "Dates": {
+          "OrderDate": {"$date": "2026-05-15T00:00:00.000Z"},
+          "RequiredDate": {"$date": "2026-06-15T00:00:00.000Z"}
+        },
+        "Employee": {
+          "EmployeeID": 1,
+          "FirstName": "Nancy",
+          "LastName": "Davolio",
+          "Title": "Sales Representative"
+        },
+        "Freight": 15.5,
+        "OrderTotal": 489.25,
+        "Shipment": {
+          "Shipper": {
+            "ShipperID": 1,
+            "CompanyName": "Speedy Express"
+          },
+          "ShipName": "Alfreds Futterkiste",
+          "ShipAddress": "Obere Str. 57",
+          "ShipCity": "Berlin",
+          "ShipCountry": "Germany"
+        },
+        "Orderdetails": [
+          {
+            "UnitPrice": 18,
+            "Quantity": 20,
+            "Discount": 0.05,
+            "Product": {
+              "ProductID": 1,
+              "ProductName": "Chai"
+            }
+          },
+          {
+            "UnitPrice": 31,
+            "Quantity": 5,
+            "Discount": 0.05,
+            "Product": {
+              "ProductID": 10,
+              "ProductName": "Ikura"
+            }
+          }
+        ]
+      }
+    ]
+  }
+]
+```
 
 UWAGA:
 W raporcie należy zamieścić kod poleceń oraz uzyskany rezultat, np wynik  polecenia `db.kolekcka.fimd().limit(2)` lub jego fragment
 
-
-## Zadanie 1  - rozwiązanie
-
-> Wyniki: 
-> 
-> przykłady, kod, zrzuty ekranów, komentarz ...
-
-a)
-
-```js
---  ...
-```
-
-b)
-
-
-```js
---  ...
-```
-
-....
+> [!NOTE] 
+> rozwiązania, obok treści zadań.
 
 # Zadanie 2 - modelowanie danych
 
@@ -495,10 +1434,11 @@ Do sprawozdania należy dołączyć
 - oraz kompletny zrzut wykonanych/przygotowanych baz danych (taki zrzut można wykonać np. za pomocą poleceń `mongoexport`, `mongdump` …)  
 	- załącznik ze zrzutem baz powinien mieć format zip
 
-## Zadanie 2  - rozwiązanie
+
+## Zadanie 2  - rozwiązanie - Michał Kościanek, code review - Michał Mąka
+
 
 ### Wybrane zagadnienie: B - Firmy, wycieczki, osoby
-
 
 
 ---
